@@ -1,0 +1,18 @@
+# maisuclaw — Render.com deployment config
+# Connect this repo at https://render.com -> New -> Web Service
+#
+# NOTE: Render free tier does NOT run Ollama.
+# This config is best used as a proxy to your home machine via Cloudflare Tunnel.
+# For full local AI, run setup.bat on your laptop instead.
+
+services:
+  - type: web
+    name: maisuclaw
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: OLLAMA_BASE_URL
+        value: "http://localhost:11434"
