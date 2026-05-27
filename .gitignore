@@ -1,15 +1,10 @@
 # Python
-venv/
 __pycache__/
 *.pyc
 *.pyo
-*.egg-info/
-dist/
-build/
-
-# Data (local only)
+venv/
 data/
-uploads/
+*.db
 
 # Environment
 .env
@@ -17,7 +12,6 @@ uploads/
 # IDE
 .vscode/
 .idea/
-*.swp
 
 # OS
 .DS_Store

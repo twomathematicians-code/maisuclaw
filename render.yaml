@@ -1,15 +1,19 @@
+# MaisuClaw v0.3.0 — Auto-Deploy to Render.com
+# ================================================
+# Push this repo to GitHub, then connect it to Render.com.
+# It will auto-build and go live.
+
 services:
   - type: web
     name: maisuclaw
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    plan: free
     envVars:
       - key: PYTHON_VERSION
-        value: "3.12.0"
+        value: "3.12.7"
       - key: GROQ_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: OLLAMA_BASE_URL
-        value: "http://localhost:11434"
