@@ -1,259 +1,250 @@
-# maisuclaw
+# MAISUCLAW
 
-> Your personal AI assistant — running 100% on your laptop. Multimodal. Streaming. Research. Voice. Remote access.
+Agent Swarm System v2.1 — 7 free AI providers (including Ollama), auto-failover, 7 specialized agents, zero cost.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-blue?logo=python" alt="Python">
-  <img src="https://img.shields.io/badge/FastAPI-0.104+-green?logo=fastapi" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Ollama-LLM-orange?logo=docker" alt="Ollama">
-  <img src="https://img.shields.io/badge/v0.3.0-f0883e?style=flat" alt="Version">
-  <img src="https://img.shields.io/badge/License-MIT-lightgrey" alt="License">
-</p>
+```
+    ∫ f(x)dx
 
-## What's in v0.3.0
+    ∇ · Agent Swarm System
+    │  ├─ ∫ Chat     — General assistant
+    │  ├─ ∇ Research — Deep analysis
+    │  ├─ λ Code     — Production code
+    │  ├─ Δ Write    — Human-like writing
+    │  ├─ Σ Analyze  — Data & business
+    │  ├─ ∂ Tutor    — Step-by-step teaching
+    │  └─ ⊕ Swarm   — Multi-agent orchestration
 
-| Feature | Description |
-|---------|-------------|
-| **8 model tiers** | From instant (0.5B) to powerful (14B) + vision + reasoning |
-| **Multimodal** | Upload images, PDFs, screenshots — AI analyzes them |
-| **Screenshot paste** | Ctrl+V to paste from clipboard |
-| **Deep research** | Multi-step web browsing + synthesis |
-| **ETA display** | See estimated response time before answer arrives |
-| **Streaming** | Tokens appear live as generated |
-| **GitHub backup** | Auto-save chats to a private repo |
-| **Remote access** | Cloudflare Tunnel — use from anywhere |
-| **GitHub Pages** | Host the UI at `username.github.io/maisuclaw` |
-| **Voice input** | Speech-to-text via Whisper |
-| **File management** | Browse, read, write files on your machine |
-| **Code execution** | Run Python code and see output |
-| **Git integration** | Status, log, commit |
-| **Notes** | Save, search, tag your notes |
-| **RAG** | Index documents, semantic search |
-
-## Model tiers
-
-| Tier | Model | Size | Speed | Best for |
-|------|-------|------|-------|----------|
-| Instant | qwen2.5:0.5b | 0.5B | ~1-2s | Quick math, greetings |
-| Fast | phi3.5 | 3.8B | ~3-5s | Simple questions |
-| Balanced | gemma2:9b | 9B | ~8-15s | General tasks |
-| Coder | qwen2.5-coder:7b | 7B | ~8-15s | Programming |
-| Powerful | qwen2.5:14b | 14B | ~15-30s | Complex analysis, writing |
-| Reasoning | deepseek-r1:8b | 8B | ~15-25s | Step-by-step thinking |
-| Vision | llava:13b | 13B | ~20-60s | Image & PDF analysis |
-
-## Quick start
-
-### Prerequisites
-
-- **Python 3.10+**
-- **Ollama** — [ollama.com](https://ollama.com)
-- **~15 GB disk** for all 8 models
-
-### 1. Clone
-
-```bash
-git clone https://github.com/twomathematicians-code/maisuclaw.git
-cd maisuclaw
+    ∞ Free Providers with Auto-Failover
+    │  ├─ Groq        — ~500 tok/s (cloud)
+    │  ├─ OpenRouter  — 50+ free models (cloud)
+    │  ├─ Cerebras    — ~1200 tok/s (cloud)
+    │  ├─ Together AI — Free credits (cloud)
+    │  ├─ SambaNova   — Free tier (cloud)
+    │  ├─ Cohere      — Free tier (cloud)
+    │  └─ Ollama      — ALL free, NO key, local GPU
 ```
 
-### 2. Setup
+## What's New in v2.1
 
-**Windows:**
-```cmd
-setup.bat
-```
+**Ollama support added!** Now you can use Ollama as a 7th provider — completely free, no API key needed, no rate limits. Just run `ollama serve` and all your local models are available. Includes auto-detection of installed Ollama models via the in-app settings.
 
-**Linux/macOS:**
-```bash
-chmod +x setup.sh
-./setup.sh
-```
+**No more rate limits.** MaisuClaw uses 7 AI providers simultaneously. When one provider hits its rate limit, it automatically switches to the next available provider — seamlessly, in real-time.
 
-### 3. Start
+## Features
 
-**Windows:**
-```cmd
-setup_run.bat
-```
+- **7 Free AI Providers** — Groq, OpenRouter, Cerebras, Together AI, SambaNova, Cohere, **Ollama**
+- **Auto-Failover** — When one provider rate-limits (429), automatically switches to the next
+- **Ollama Support** — Local models, no API key, 100% free, auto-detect installed models
+- **7 Specialized Agents** — Pick one or use Swarm for multi-agent collaboration
+- **45+ Models** — All free: Llama 3.3 70B, DeepSeek R1, Qwen, Gemini, Phi-4, Mistral, Command R+, CodeLlama...
+- **File Upload** — Photos, PDFs, code files, any type (up to 20MB)
+- **Screenshot Paste** — Ctrl+V to paste screenshots directly
+- **Drag & Drop** — Drop files anywhere on the page
+- **Image Preview** — Thumbnails in chat for uploaded images
+- **Stop Generation** — Halt streaming responses mid-generation
+- **Chat History** — All conversations saved with sidebar navigation
+- **Mathematical Design** — Clean monospace UI with grid background and math symbols
+- **One-Click Deploy** — Push to GitHub, connect to Render, done
+- **Zero Cost** — Runs on Render.com free tier forever
 
-**Linux/macOS:**
-```bash
-source venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
+## Deploy (5 minutes)
 
-### 4. Open
+### Step 1: Get free API keys
 
-- **Browser:** `http://localhost:8000`
-- **Phone (same Wi-Fi):** `http://<your-laptop-ip>:8000`
-- **Phone (anywhere):** Run `scripts/cloudflare_tunnel.bat`, then open the URL
+You need at least **one** API key (or Ollama installed), but **more = better** (auto-failover works with multiple).
 
-## Features guide
+| Provider | Speed | Free Tier | Sign Up |
+|----------|-------|-----------|---------|
+| **Groq** | ~500 tok/s | 30 req/min, 14400/day | [console.groq.com/keys](https://console.groq.com/keys) |
+| **OpenRouter** | varies | 50+ free models | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **Cerebras** | ~1200 tok/s | Unlimited free | [cloud.cerebras.ai](https://cloud.cerebras.ai/) |
+| **Together AI** | ~150 tok/s | $5 free credits | [api.together.xyz](https://api.together.xyz/settings/api-keys) |
+| **SambaNova** | ~200 tok/s | Free tier | [cloud.sambanova.ai](https://cloud.sambanova.ai/) |
+| **Cohere** | ~100 tok/s | Free (rate limited) | [dashboard.cohere.com](https://dashboard.cohere.com/api-keys) |
+| **Ollama** | local GPU | 100% free, no key | [ollama.com](https://ollama.com) |
 
-### Upload images & PDFs
+**Best setup**: Groq + Ollama + Cerebras + OpenRouter (local + cloud + speed + coverage)
 
-- Click the upload button (top bar) or drag & drop files onto the page
-- Paste screenshots with **Ctrl+V**
-- Images are analyzed by the vision model (llava:13b)
-- PDFs are extracted and analyzed by the powerful model
-- Preview thumbnails appear before sending
+### Step 2: Push to GitHub
 
-### Deep research
+Upload all files from this repo to your GitHub repository.
 
-1. Type your research question
-2. Click the **Research** button
-3. Watch as maisuclaw:
-   - Breaks your question into sub-questions
-   - Searches the web for each
-   - Extracts content from top results
-   - Synthesizes a comprehensive report with sources
+### Step 3: Deploy to Render
 
-### ETA display
+1. Go to [dashboard.render.com](https://dashboard.render.com) — sign up with GitHub
+2. Click **New** → **Web Service**
+3. Connect your repository
+4. Render auto-detects `render.yaml` — leave defaults
+5. Add environment variables for your API keys:
+   - `GROQ_API_KEY` = your key
+   - `OPENROUTER_API_KEY` = your key
+   - `CEREBRAS_API_KEY` = your key (optional but recommended)
+   - `TOGETHER_API_KEY` = your key (optional)
+   - `SAMBANOVA_API_KEY` = your key (optional)
+   - `COHERE_API_KEY` = your key (optional)
+   - `OLLAMA_BASE_URL` = your URL (optional, for remote Ollama)
+6. Click **Create Web Service**
 
-When you send a message, an estimated response time appears (e.g. "~8s"). This is based on:
-- Model size (larger = slower)
-- Input length
-- Whether images are attached
-- Whether tools are needed
+Your app is live at `https://your-service.onrender.com`.
 
-### Voice input
+### Using Ollama (no API key needed!)
 
-Click the microphone button to record. Audio is transcribed via Whisper and sent as text.
+1. Install Ollama: [ollama.com](https://ollama.com)
+2. Pull some models:
+   ```bash
+   ollama pull llama3.3:70b    # Large model
+   ollama pull deepseek-r1:70b # Reasoning
+   ollama pull mistral:7b       # Fast
+   ollama pull qwen2.5:72b     # Big Chinese model
+   ```
+3. Start Ollama: `ollama serve` (default: `http://localhost:11434`)
+4. MaisuClaw auto-detects Ollama at localhost — no configuration needed!
+5. You can change the Ollama URL in Settings (gear icon)
 
-### Remote access from anywhere
+**Tip**: Ollama is the best zero-config option. Install it, pull models, and it just works.
 
-See [docs/REMOTE_ACCESS.md](docs/REMOTE_ACCESS.md) for full guide.
+### Adding cloud provider keys later
 
-**Quickest method — Cloudflare Tunnel:**
-1. Install [cloudflared](https://github.com/cloudflare/cloudflared/releases)
-2. Run `scripts/cloudflare_tunnel.bat`
-3. Open the URL on any device
+You can add/remove API keys anytime from the in-app settings (gear icon) — no redeployment needed. Or add them in the Render dashboard Environment tab.
 
-### GitHub Pages
+## How Auto-Failover Works
 
-Host the UI at a nice URL:
-```
-https://username.github.io/maisuclaw
-```
-See [docs/REMOTE_ACCESS.md](docs/REMOTE_ACCESS.md) for setup.
+1. You send a message using model X on provider A
+2. If provider A returns 429 (rate limited) or connection fails, MaisuClaw marks it as "cooling down" for 60 seconds
+3. It automatically finds an equivalent model from provider B and retries
+4. This happens transparently — you see a brief "Switching to..." message in the chat
+5. After the cooldown period, provider A becomes available again
 
-### GitHub cloud backup
+More API keys = more reliability. With all 7 providers configured, you effectively get unlimited free inference.
 
-Edit `config.py`:
-```python
-GITHUB_BACKUP_ENABLED = True
-GITHUB_TOKEN = "ghp_your_token"
-GITHUB_USERNAME = "your_username"
-GITHUB_REPO = "maisuclaw-chats"
-```
-
-Then: `curl -X POST http://localhost:8000/backup`
-
-## Project structure
+## Project Structure
 
 ```
 maisuclaw/
-├── main.py                  # FastAPI server (entry point)
-├── config.py                # All settings
-├── requirements.txt         # Dependencies
-├── setup.bat / setup.sh     # One-command setup
-├── setup_run.bat            # One-command start (Windows)
-├── LICENSE                  # MIT
-├── .gitignore
-│
-├── agent/
-│   ├── router.py            # 8-tier model routing + multimodal detection
-│   └── planner.py           # Agent loop with streaming
-│
-├── services/
-│   ├── ollama.py            # Ollama API (chat, stream, vision, embed)
-│   ├── vision.py            # Image/screenshot analysis
-│   ├── pdf_extractor.py     # PDF text + image extraction
-│   ├── research.py          # Deep research agent
-│   ├── eta.py               # Response time estimation
-│   ├── whisper.py           # Speech-to-text
-│   ├── memory.py            # SQLite storage
-│   └── github_backup.py     # GitHub cloud backup
-│
-├── tools/
-│   ├── file_manager.py      # File operations
-│   ├── code_runner.py       # Python execution
-│   ├── git_manager.py       # Git operations
-│   ├── browser.py           # Web search
-│   └── rag.py               # Document indexing
-│
+├── app.py              # FastAPI + 7 providers + auto-failover + agents + swarm + uploads
 ├── static/
-│   ├── index.html           # Web UI
-│   ├── style.css            # Dark theme
-│   └── app.js               # Frontend logic
-│
-├── docs/
-│   └── REMOTE_ACCESS.md     # Deployment guide
-│
-└── scripts/
-    └── cloudflare_tunnel.bat # Remote access
+│   └── index.html      # Complete UI (multi-provider settings, Ollama auto-detect)
+├── requirements.txt    # 5 pip packages
+├── Procfile            # Render start command
+├── render.yaml         # Auto-deploy config (7 env vars)
+├── Dockerfile          # Docker option
+├── runtime.txt         # Python version
+├── .gitignore
+└── README.md           # This file
 ```
 
-## API endpoints
+## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | Web UI |
-| `POST` | `/chat` | Streaming chat (SSE) |
-| `POST` | `/upload` | Upload image/PDF for analysis |
-| `POST` | `/screenshot` | Paste screenshot for analysis |
-| `POST` | `/research` | Deep research (SSE) |
-| `POST` | `/stt` | Audio transcription |
-| `POST` | `/notes` | Create note |
-| `GET` | `/notes?q=` | Search notes |
-| `DELETE` | `/notes/{id}` | Delete note |
-| `POST` | `/rag/index` | Index document |
-| `POST` | `/rag/search` | Search documents |
-| `POST` | `/backup` | GitHub backup |
-| `GET` | `/backup/status` | Backup config check |
-| `POST` | `/tool/*` | Direct tool access |
-| `GET` | `/info` | Server info + features |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Serve UI |
+| GET | `/api/status` | Provider status, available models, agents |
+| GET | `/api/providers` | All provider info (for settings UI) |
+| GET | `/api/ollama/models` | Auto-detect installed Ollama models |
+| GET | `/api/conversations` | List all conversations |
+| GET | `/api/conversations/{id}` | Get conversation + messages |
+| POST | `/api/conversations` | Create new conversation |
+| DELETE | `/api/conversations/{id}` | Delete conversation |
+| POST | `/api/conversations/{id}/clear` | Clear messages |
+| POST | `/api/upload` | Upload file (returns base64) |
+| POST | `/api/chat` | Send message (SSE stream with auto-failover) |
+| POST | `/api/stop` | Stop current generation |
+| POST | `/api/settings` | Save API keys (all providers) |
 
-## Configuration
+## Models
 
-All in `config.py`:
-```python
-# Models
-MODEL_INSTANT   = "qwen2.5:0.5b"
-MODEL_FAST      = "phi3.5"
-MODEL_CODER     = "qwen2.5-coder:7b"
-MODEL_GENERAL   = "gemma2:9b"
-MODEL_POWERFUL  = "qwen2.5:14b"
-MODEL_REASONING = "deepseek-r1:8b"
-MODEL_VISION    = "llava:13b"
+### Groq (fastest cloud inference)
+| Model | Speed | Tier |
+|-------|-------|------|
+| Llama 3.3 70B | ~500 tok/s | 3 |
+| DeepSeek R1 70B | ~400 tok/s | 3 |
+| Qwen QWQ 32B | ~400 tok/s | 3 |
+| Llama 3 70B | ~500 tok/s | 3 |
+| Mixtral 8x7B | ~450 tok/s | 2 |
+| Gemma 2 9B | ~550 tok/s | 2 |
+| Llama 3.1 8B | ~600 tok/s | 1 |
 
-# Performance
-CHAT_HISTORY_LIMIT = 10
+### Cerebras (ultra fast cloud)
+| Model | Speed | Tier |
+|-------|-------|------|
+| Llama 3.3 70B | ~1200 tok/s | 3 |
+| DeepSeek R1 70B | ~1200 tok/s | 3 |
+| Llama 3.1 8B | ~1200 tok/s | 2 |
 
-# Remote access
-REMOTE_ACCESS_ENABLED = False
-PUBLIC_URL = ""
+### OpenRouter (most cloud models, includes Gemini)
+| Model | Tier | Vision |
+|-------|------|--------|
+| Gemini 2.0 Flash | 3 | Yes |
+| DeepSeek R1 0528 | 3 | — |
+| DeepSeek V3 | 3 | — |
+| Qwen3 235B | 3 | — |
+| Llama 4 Maverick | 3 | — |
+| Mistral Small 3.1 | 2 | — |
+| Gemma 3 27B | 2 | — |
+| Phi-4 | 2 | — |
 
-# GitHub backup
-GITHUB_BACKUP_ENABLED = False
-GITHUB_TOKEN = ""
-GITHUB_USERNAME = ""
-GITHUB_REPO = "maisuclaw-chats"
+### Together AI (cloud)
+| Model | Speed | Tier |
+|-------|-------|------|
+| Llama 3.3 70B Turbo | ~150 tok/s | 3 |
+| DeepSeek R1 70B | ~150 tok/s | 3 |
+| Qwen 2.5 72B Turbo | ~150 tok/s | 3 |
+| Llama 3 70B | ~150 tok/s | 3 |
+| Mixtral 8x7B | ~150 tok/s | 2 |
+
+### SambaNova (cloud)
+| Model | Speed | Tier |
+|-------|-------|------|
+| Llama 3.3 70B | ~200 tok/s | 3 |
+| DeepSeek R1 70B | ~200 tok/s | 3 |
+| Llama 3.1 8B | ~200 tok/s | 1 |
+
+### Ollama (100% free, local GPU, no key)
+| Model | Tier | Size |
+|-------|------|------|
+| Llama 3.3 70B | 3 | ~40GB |
+| Qwen 2.5 72B | 3 | ~41GB |
+| DeepSeek R1 70B | 3 | ~40GB |
+| Gemma 2 27B | 2 | ~16GB |
+| Mistral 7B | 2 | ~4.1GB |
+| Phi-4 14B | 2 | ~7.6GB |
+| CodeLlama 13B | 2 | ~7.4GB |
+| Dolphin Mixtral 8x7B | 2 | ~26GB |
+| Llama 3.1 8B | 1 | ~4.7GB |
+| Starling LM 7B | 1 | ~4.1GB |
+| TinyLlama 1.1B | 0 | ~0.7GB |
+
+Any model pulled via `ollama pull <name>` will also work. Use the model name as the model ID.
+
+### Cohere (cloud)
+| Model | Speed | Tier |
+|-------|-------|------|
+| Command R+ | ~100 tok/s | 3 |
+| Command R | ~100 tok/s | 2 |
+
+## Local Development
+
+```bash
+pip install -r requirements.txt
+
+# Option A: Use Ollama (easiest, no API keys)
+ollama serve  # Start Ollama first
+python app.py
+# Open http://localhost:8000 — Ollama models auto-detected!
+
+# Option B: Use cloud providers
+export GROQ_API_KEY=gsk_xxx
+export OPENROUTER_API_KEY=sk-or-xxx
+export CEREBRAS_API_KEY=xxx
+python app.py
+# Open http://localhost:8000
+
+# Option C: Mix both!
+export GROQ_API_KEY=gsk_xxx
+python app.py
+# Ollama (localhost) + Groq (cloud) = auto-failover between local & cloud
 ```
-
-## Performance tips
-
-1. **Use Instant mode** for trivial questions (~1-2s)
-2. **Use model selector** — don't default to Powerful for everything
-3. **Reduce history** — `CHAT_HISTORY_LIMIT = 6`
-4. **Close unused apps** — free RAM for Ollama
-5. **Keep only needed models** — `ollama rm <model>` to free disk
 
 ## License
 
-MIT — use it, modify it, make it yours.
-
----
-
-*Built with Ollama, FastAPI, and a ThinkPad.*
+MIT
