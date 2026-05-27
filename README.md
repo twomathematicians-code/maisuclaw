@@ -78,7 +78,7 @@ maisuclaw/
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/maisuclaw.git
+git clone https://github.com/twomathematicians-code/maisuclaw.git
 cd maisuclaw
 ```
 
