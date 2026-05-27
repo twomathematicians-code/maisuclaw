@@ -40,6 +40,14 @@ body>*{position:relative;z-index:1}
 .sb-h .lg{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ac);letter-spacing:.5px}
 .sb-h .lg span{color:var(--tx2);font-weight:400}
 .sb-h .v{font-family:var(--mono);font-size:9px;color:var(--mt);padding:1px 5px;border:1px solid var(--bd);border-radius:3px;margin-left:auto}
+.sb-p{margin:10px;border:1px solid var(--bd);border-radius:4px;padding:8px;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(108,76,246,.08),rgba(34,211,238,.05));cursor:pointer;transition:all .12s}
+.sb-p:hover{border-color:var(--ac);box-shadow:0 0 0 1px rgba(108,76,246,.15)}
+.sb-av{width:32px;height:32px;border-radius:4px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;color:var(--ac);background:var(--bg3)}
+.sb-info{flex:1;min-width:0}
+.sb-name{font-family:var(--mono);font-size:11px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-tag{font-family:var(--mono);font-size:9px;color:var(--mt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-edit{background:none;border:1px solid var(--bd);color:var(--mt);font-size:10px;border-radius:3px;padding:2px 4px;cursor:pointer;transition:all .12s}
+.sb-edit:hover{border-color:var(--ac);color:var(--ac)}
 .nb{margin:8px 10px;padding:9px;background:transparent;border:1px solid var(--bd);border-radius:var(--r);color:var(--tx2);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .12s;letter-spacing:.3px}
 .nb:hover{border-color:var(--ac);color:var(--ac)}
 .cl{flex:1;overflow-y:auto;padding:4px 6px}
@@ -199,11 +207,28 @@ body>*{position:relative;z-index:1}
 .md label{display:block;font-family:var(--mono);font-size:9px;color:var(--tx2);margin-bottom:3px;letter-spacing:.3px}
 .md input{width:100%;padding:7px 9px;background:var(--bg3);border:1px solid var(--bd);color:var(--tx);border-radius:3px;font-family:var(--mono);font-size:11px;outline:none}
 .md input:focus{border-color:var(--ac)}
+.md input[type="checkbox"]{width:auto}
+.md .ck{display:flex;align-items:center;gap:6px;margin:6px 0;font-family:var(--mono);font-size:9px;color:var(--tx2)}
+.md .ck span{flex:1}
 .md .hl{font-family:var(--mono);font-size:8px;color:var(--mt);margin-top:2px}
 .md a{color:var(--ac)}
 .br{display:flex;gap:6px;margin-top:12px}
 .bt{flex:1;padding:7px;border-radius:3px;border:1px solid var(--bd);font-family:var(--mono);font-size:10px;cursor:pointer;font-weight:600;letter-spacing:.3px;background:transparent;color:var(--tx2)}
 .bt.p{border-color:var(--ac);color:var(--ac)}.bt.p:hover{background:var(--ac);color:#fff}
+.bt.w{border-color:var(--org);color:var(--org)}.bt.w:hover{background:var(--org);color:#fff}
+
+/* Toast */
+.toast{position:fixed;bottom:14px;right:14px;background:var(--bg2);border:1px solid var(--bd);padding:8px 12px;border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--tx2);opacity:0;transform:translateY(6px);transition:all .2s;z-index:400}
+.toast.on{opacity:1;transform:translateY(0)}
+.toast.good{border-color:rgba(34,197,94,.3);color:var(--grn)}
+.toast.bad{border-color:rgba(255,60,92,.3);color:var(--red)}
+
+/* UI toggles */
+body.math-grid-off::before{opacity:0}
+body.math-glow-off::after{opacity:0}
+body.compact .msg{max-width:640px}
+body.compact .mg{gap:8px;padding:12px}
+body.compact .ip-w textarea{font-size:12px}
 
 @media(max-width:700px){
 .sb{position:fixed;z-index:100;height:100%;margin-left:-264px}
@@ -218,6 +243,14 @@ body>*{position:relative;z-index:1}
   <div class="sb-h">
     <span class="lg">MAISU<span>CLAW</span></span>
     <span class="v">v2.1</span>
+  </div>
+  <div class="sb-p" id="profileCard" onclick="openProfile()">
+    <div class="sb-av" id="profileAvatar">&#x2200;</div>
+    <div class="sb-info">
+      <div class="sb-name" id="profileName">Mathematician</div>
+      <div class="sb-tag" id="profileTag">Research Lab</div>
+    </div>
+    <button class="sb-edit" onclick="event.stopPropagation();openProfile()">EDIT</button>
   </div>
   <button class="nb" onclick="newChat()">+ NEW</button>
   <div class="cl" id="cl"></div>
@@ -288,16 +321,65 @@ body>*{position:relative;z-index:1}
   <div class="md" id="setMd">
     <h2>&#x2699; API PROVIDERS</h2>
     <div class="md-sub">Add keys for multiple providers. Auto-failover switches automatically when one rate-limits. More keys = more reliability.</div>
+    <div class="sg" id="uiSettings">
+      <div class="sg-h">
+        <span class="sg-dot y"></span>
+        <span class="sg-name">UI PREFERENCES</span>
+        <span class="sg-info">local settings</span>
+        <span class="sg-tier" style="color:var(--cyn);background:rgba(34,211,238,.1)">LOCAL</span>
+      </div>
+      <label>MATHEMATICAL FEEL</label>
+      <div class="ck"><input type="checkbox" id="uiGrid" onchange="toggleUi('grid',this.checked)"><span>Grid background</span></div>
+      <div class="ck"><input type="checkbox" id="uiGlow" onchange="toggleUi('glow',this.checked)"><span>Symbol glow</span></div>
+      <div class="ck"><input type="checkbox" id="uiCompact" onchange="toggleUi('compact',this.checked)"><span>Compact layout</span></div>
+    </div>
     <div id="sgList"></div>
-    <div class="br"><button class="bt" onclick="closeSet()">CLOSE</button><button class="bt p" onclick="saveSet()">SAVE & RELOAD</button></div>
+    <div class="br"><button class="bt" onclick="closeSet()">CLOSE</button><button class="bt p" onclick="saveSet()">SAVE</button></div>
   </div>
 </div>
+
+<!-- Profile Modal -->
+<div class="ov" id="profileM">
+  <div class="md">
+    <h2>&#x222B; PROFILE</h2>
+    <div class="md-sub">Build your identity for this workspace. Stored locally in your browser.</div>
+    <label>DISPLAY NAME</label>
+    <input type="text" id="profileNameIn" placeholder="Ada Lovelace">
+    <label>ROLE / TAGLINE</label>
+    <input type="text" id="profileTagIn" placeholder="Theory Lab">
+    <label>AVATAR SYMBOL</label>
+    <input type="text" id="profileSymbolIn" placeholder="&#x03C0; or AL" maxlength="3">
+    <div class="hl">Use a math symbol or initials (e.g., ∑, ∫, π, AL).</div>
+    <div class="br">
+      <button class="bt" onclick="closeProfile()">CLOSE</button>
+      <button class="bt w" onclick="resetProfile()">RESET</button>
+      <button class="bt p" onclick="saveProfile()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 let cur=null,gen=false,ctrl=null,agents={},models=[],activeAgent='chat',providerStatus={};
 let pendingFile=null;
+let conversations=[];
+const profileDefaults={name:'Mathematician',tag:'Research Lab',symbol:''};
+const uiDefaults={grid:true,glow:true,compact:false};
+let profile={...profileDefaults};
+let uiSettings={...uiDefaults};
 
-document.addEventListener('DOMContentLoaded',()=>{loadSt();loadConv();aR(document.getElementById('ui'));setupDragDrop()});
+document.addEventListener('DOMContentLoaded',async()=>{
+  loadProfile();
+  loadUiSettings();
+  applyProfile();
+  applyUiSettings();
+  await loadSt();
+  const list=await loadConv();
+  await resumeConversation(list);
+  aR(document.getElementById('ui'));
+  setupDragDrop();
+});
 document.getElementById('ui').addEventListener('input',function(){aR(this)});
 function aR(e){e.style.height='auto';e.style.height=Math.min(e.scrollHeight,120)+'px'}
 
@@ -354,6 +436,88 @@ async function handleFile(file){
 function clearFile(){pendingFile=null;document.getElementById('fpBar').classList.remove('on');document.getElementById('fileIn').value=''}
 function formatSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB'}
 
+// ── Profile ──
+function loadProfile(){
+  try{profile={...profileDefaults,...JSON.parse(localStorage.getItem('mc_profile')||'{}')}}catch(e){profile={...profileDefaults}}
+  if(!profile.symbol)profile.symbol=calcSymbol(profile.name);
+}
+function calcSymbol(name){
+  const parts=(name||'').trim().split(/\s+/).filter(Boolean);
+  if(!parts.length)return '∀';
+  return parts.slice(0,2).map(p=>p[0].toUpperCase()).join('');
+}
+function applyProfile(){
+  const av=document.getElementById('profileAvatar');
+  const pn=document.getElementById('profileName');
+  const pt=document.getElementById('profileTag');
+  if(av)av.textContent=profile.symbol||calcSymbol(profile.name);
+  if(pn)pn.textContent=profile.name||profileDefaults.name;
+  if(pt)pt.textContent=profile.tag||profileDefaults.tag;
+  updateWelcome();
+}
+function openProfile(){
+  document.getElementById('profileNameIn').value=profile.name||'';
+  document.getElementById('profileTagIn').value=profile.tag||'';
+  document.getElementById('profileSymbolIn').value=profile.symbol||calcSymbol(profile.name);
+  document.getElementById('profileM').classList.add('on');
+}
+function closeProfile(){document.getElementById('profileM').classList.remove('on')}
+function saveProfile(){
+  profile.name=document.getElementById('profileNameIn').value.trim()||profileDefaults.name;
+  profile.tag=document.getElementById('profileTagIn').value.trim()||profileDefaults.tag;
+  profile.symbol=document.getElementById('profileSymbolIn').value.trim().slice(0,3)||calcSymbol(profile.name);
+  localStorage.setItem('mc_profile',JSON.stringify(profile));
+  applyProfile();
+  closeProfile();
+  showToast('Profile updated','good');
+}
+function resetProfile(){
+  profile={...profileDefaults};
+  localStorage.removeItem('mc_profile');
+  applyProfile();
+  closeProfile();
+  showToast('Profile reset','good');
+}
+function userBadge(){return profile.symbol||calcSymbol(profile.name)}
+
+// ── UI Preferences ──
+function loadUiSettings(){
+  try{uiSettings={...uiDefaults,...JSON.parse(localStorage.getItem('mc_ui')||'{}')}}catch(e){uiSettings={...uiDefaults}}
+  syncUiSettings();
+}
+function syncUiSettings(){
+  const g=document.getElementById('uiGrid');if(g)g.checked=!!uiSettings.grid;
+  const l=document.getElementById('uiGlow');if(l)l.checked=!!uiSettings.glow;
+  const c=document.getElementById('uiCompact');if(c)c.checked=!!uiSettings.compact;
+}
+function toggleUi(key,val){
+  uiSettings[key]=val;
+  localStorage.setItem('mc_ui',JSON.stringify(uiSettings));
+  applyUiSettings();
+}
+function applyUiSettings(){
+  document.body.classList.toggle('math-grid-off',!uiSettings.grid);
+  document.body.classList.toggle('math-glow-off',!uiSettings.glow);
+  document.body.classList.toggle('compact',!!uiSettings.compact);
+}
+
+function updateFoInfo(activeCount,totalProviders){
+  const foInfo=document.getElementById('foInfo');
+  if(!foInfo)return;
+  const active=activeCount??Object.values(providerStatus).filter(p=>p.ready).length;
+  const total=totalProviders??Object.keys(providerStatus).length;
+  foInfo.textContent=`${active}/${total} providers active`;
+}
+
+function showToast(msg, tone){
+  const t=document.getElementById('toast');
+  if(!t)return;
+  t.className=`toast on ${tone||''}`;
+  t.textContent=msg;
+  clearTimeout(t._to);
+  t._to=setTimeout(()=>{t.className='toast'},2200);
+}
+
 // ── Status & Init ──
 async function loadSt(){
   try{
@@ -371,8 +535,7 @@ async function loadSt(){
     }
 
     // Update failover info
-    const foInfo=document.getElementById('foInfo');
-    foInfo.textContent=`${d.active_count}/${d.total_providers} providers active`;
+    updateFoInfo(d.active_count,d.total_providers);
 
     // Agent buttons
     const ab=document.getElementById('ab');
@@ -410,7 +573,14 @@ function selAgent(id){
   });
 }
 
-async function loadConv(){try{const r=await fetch('/api/conversations'),d=await r.json();renderConv(d.conversations)}catch(e){}}
+async function loadConv(){
+  try{
+    const r=await fetch('/api/conversations'),d=await r.json();
+    conversations=d.conversations||[];
+    renderConv(conversations);
+    return conversations;
+  }catch(e){return []}
+}
 
 function renderConv(list){
   const el=document.getElementById('cl');el.innerHTML='';
@@ -423,7 +593,7 @@ function renderConv(list){
 }
 
 async function loadMsgs(id){
-  cur=id;
+  setCurrentConversation(id);
   try{
     const r=await fetch(`/api/conversations/${id}`),d=await r.json();
     const mc=document.getElementById('mc');mc.innerHTML='';
@@ -435,7 +605,50 @@ async function loadMsgs(id){
   }catch(e){}
 }
 
-function newChat(){cur=null;document.getElementById('mc').innerHTML=`<div class="wl" id="wl"><div class="formula">&#x222B; f(x)dx</div><h1>MAISUCLAW</h1><p>Agent Swarm System</p></div>`;loadConv();document.getElementById('ui').focus()}
+function setCurrentConversation(id){
+  cur=id;
+  if(id)localStorage.setItem('mc_last_conversation',id);
+  localStorage.removeItem('mc_new_chat');
+}
+
+async function resumeConversation(list){
+  if(localStorage.getItem('mc_new_chat')==='1')return;
+  const last=localStorage.getItem('mc_last_conversation');
+  const target=list.find(c=>c.id===last)||list[0];
+  if(target)await loadMsgs(target.id);
+}
+
+function renderWelcome(){
+  const name=profile.name||profileDefaults.name;
+  const tag=profile.tag||profileDefaults.tag;
+  return `<div class="wl" id="wl">
+      <div class="formula">&#x222B; f(x)dx</div>
+      <h1>MAISUCLAW</h1>
+      <p>Welcome back, ${esc(name)}. ${esc(tag)} is ready.</p>
+      <div class="fo-info" id="foInfo"></div>
+      <div class="qk">
+        <button onclick="qs('Research the latest breakthroughs in quantum computing')">Research</button>
+        <button onclick="qs('Write a Python REST API with JWT auth')">Code</button>
+        <button onclick="qs('Analyze pros and cons of microservices vs monolith')">Analyze</button>
+        <button onclick="qs('Write a short sci-fi story about AI')">Write</button>
+      </div>
+    </div>`;
+}
+
+function updateWelcome(){
+  const w=document.getElementById('wl');
+  if(w)w.outerHTML=renderWelcome();
+}
+
+function newChat(){
+  cur=null;
+  localStorage.setItem('mc_new_chat','1');
+  localStorage.removeItem('mc_last_conversation');
+  document.getElementById('mc').innerHTML=renderWelcome();
+  updateFoInfo();
+  loadConv();
+  document.getElementById('ui').focus();
+}
 function qs(t){document.getElementById('ui').value=t;send()}
 
 async function send(){
@@ -443,6 +656,7 @@ async function send(){
   if((!msg&&!pendingFile)||gen)return;
   gen=true;document.getElementById('sB').disabled=true;document.getElementById('stB').classList.add('vis');
   const w=document.getElementById('wl');if(w)w.style.display='none';
+  if(!cur)localStorage.removeItem('mc_new_chat');
 
   const file=pendingFile;
   addU(msg||`[Uploaded: ${file?file.name:'file'}]`,file?file.type:null,file?file.name:null,file?file.base64:null);
@@ -500,13 +714,25 @@ async function send(){
         }catch(e){}
       }
     }
-    loadConv();
+    const list=await loadConv();
+    if(!cur&&list.length){
+      setCurrentConversation(list[0].id);
+      renderConv(list);
+    }
   }catch(e){if(e.name!=='AbortError')addA('[Error] '+e.message,activeAgent,false,true)}
   finally{gen=false;ctrl=null;document.getElementById('sB').disabled=false;document.getElementById('stB').classList.remove('vis');document.getElementById('fo').classList.remove('on');document.getElementById('ui').focus()}
 }
 
 function stop(){if(ctrl)ctrl.abort();if(cur)fetch('/api/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:cur})})}
-async function delC(id){if(!confirm('Delete?'))return;await fetch(`/api/conversations/${id}`,{method:'DELETE'});if(cur===id)newChat();loadConv()}
+async function delC(id){
+  if(!confirm('Delete?'))return;
+  await fetch(`/api/conversations/${id}`,{method:'DELETE'});
+  if(cur===id){
+    localStorage.removeItem('mc_last_conversation');
+    newChat();
+  }
+  loadConv();
+}
 async function clearChat(){if(!cur)return;if(!confirm('Clear?'))return;await fetch(`/api/conversations/${cur}/clear`,{method:'POST'});loadMsgs(cur)}
 
 function addU(c,attType,attName,attData){
@@ -519,7 +745,7 @@ function addU(c,attType,attName,attData){
       attHTML=`<div class="att-file"><span class="af-ic">&#x1F4C4;</span><span>${esc(attName)}</span></div>`;
     }
   }
-  d.innerHTML=`<div class="av">&#x2200;</div><div><div class="bb">${attHTML}${c?md(c):''}</div></div>`;
+  d.innerHTML=`<div class="av">${userBadge()}</div><div><div class="bb">${attHTML}${c?md(c):''}</div></div>`;
   mc.appendChild(d);return d;
 }
 
@@ -542,6 +768,7 @@ function kd(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}
 // ── Settings (multi-provider) ──
 async function openSet(){
   document.getElementById('setM').classList.add('on');
+  syncUiSettings();
   try{
     const r=await fetch('/api/providers'),d=await r.json();
     const list=document.getElementById('sgList');list.innerHTML='';
@@ -605,10 +832,17 @@ async function saveSet(){
       if(pid!=='ollama')body[pid+'_api_key']=val;
     });
     const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(r.ok){closeSet();alert('Saved! Reloading...');location.reload()}else alert('Error')}
-  catch(e){alert('Error: '+e.message)}
+    if(r.ok){
+      closeSet();
+      await loadSt();
+      showToast('Settings updated','good');
+    }else{
+      showToast('Settings error','bad');
+    }
+  }catch(e){showToast('Settings error','bad')}
 }
 document.getElementById('setM').addEventListener('click',function(e){if(e.target===this)closeSet()});
+document.getElementById('profileM').addEventListener('click',function(e){if(e.target===this)closeProfile()});
 
 function md(t){
   if(!t)return'';
