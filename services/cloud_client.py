@@ -8,7 +8,9 @@ import httpx
 import json
 from typing import AsyncGenerator, Optional
 
-from config import GROQ_API_KEY, GROQ_BASE_URL, OPENROUTER_API_KEY, OPENROUTER_BASE_URL
+from config import (
+    GROQ_API_KEY, GROQ_BASE_URL, OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_REFERER,
+)
 
 
 class CloudModelError(Exception):
@@ -132,7 +134,7 @@ class OpenRouterClient:
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://maisuclaw.onrender.com",
+            "HTTP-Referer": OPENROUTER_REFERER,
             "X-Title": "MaisuClaw",
         }
 

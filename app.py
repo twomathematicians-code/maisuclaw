@@ -34,6 +34,7 @@ import httpx
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER", "https://maisuclaw.onrender.com")
 GROQ_URL = "https://api.groq.com/openai/v1"
 OPENROUTER_URL = "https://openrouter.ai/api/v1"
 PORT = int(os.environ.get("PORT", "8000"))
@@ -269,7 +270,7 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
 
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if provider == "openrouter":
-        headers["HTTP-Referer"] = "https://maisuclaw.onrender.com"
+        headers["HTTP-Referer"] = OPENROUTER_REFERER
         headers["X-Title"] = "MaisuClaw"
 
     payload = {"model": model_id, "messages": messages, "stream": True,
