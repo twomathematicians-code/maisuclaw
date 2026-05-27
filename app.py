@@ -260,11 +260,15 @@ def init_db():
             conversation_id TEXT NOT NULL, role TEXT NOT NULL,
             content TEXT NOT NULL, agent TEXT DEFAULT 'chat',
             model_id TEXT, timestamp TEXT NOT NULL, duration_ms INTEGER DEFAULT 0,
-            attachment_type TEXT, attachment_name TEXT, attachment_data TEXT,
+            attachment_type TEXT, attachment_name TEXT, attachment_data TEXT, link_url TEXT,
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id);
     """)
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN link_url TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -293,12 +297,12 @@ def delete_conversation(cid):
     conn.commit(); conn.close()
 
 def add_message(cid, role, content, agent="chat", model_id=None, duration_ms=0,
-                att_type=None, att_name=None, att_data=None):
+                att_type=None, att_name=None, att_data=None, link_url=None):
     conn = get_db()
     conn.execute(
-        "INSERT INTO messages (conversation_id,role,content,agent,model_id,timestamp,duration_ms,attachment_type,attachment_name,attachment_data) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO messages (conversation_id,role,content,agent,model_id,timestamp,duration_ms,attachment_type,attachment_name,attachment_data,link_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         (cid, role, content, agent, model_id, datetime.utcnow().isoformat(), duration_ms,
-         att_type, att_name, att_data))
+         att_type, att_name, att_data, link_url))
     conn.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.utcnow().isoformat(), cid))
     conn.commit(); conn.close()
 
@@ -578,16 +582,16 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
 async def run_swarm(query, model_id, temperature, agent_count=None):
     max_agents = len([k for k in AGENTS if k != "swarm"])
     count = None
-    if agent_count:
+    if agent_count and max_agents > 0:
         try:
             count = max(1, min(int(agent_count), max_agents))
         except (TypeError, ValueError):
             count = None
-    count_hint = f"Use up to {count} agents." if count else ""
+    count_hint = f"Use up to {count} agents.\n" if count else ""
     swarm_prompt = (
         'You are the Swarm Coordinator. Reply ONLY in JSON: {"agents":["coder","researcher"],"plan":"brief plan"}\n'
         "Available: " + ", ".join(k for k in AGENTS if k != "swarm") + "\n"
-        f"{count_hint}\n"
+        f"{count_hint}"
         f"Query: {query}"
     )
     coord = ""
@@ -650,6 +654,7 @@ class ChatReq(BaseModel):
     agent: Optional[str] = "chat"
     model_id: Optional[str] = DEFAULT_MODEL
     agent_count: Optional[int] = None
+    link_url: Optional[str] = None
     attachment_type: Optional[str] = None
     attachment_name: Optional[str] = None
     attachment_data: Optional[str] = None
@@ -742,6 +747,7 @@ async def chat(req: ChatReq):
     att_type = req.attachment_type
     att_name = req.attachment_name
     att_data = req.attachment_data
+    link_url = req.link_url
 
     if att_type and att_name:
         if att_type.startswith("image/"):
@@ -749,8 +755,11 @@ async def chat(req: ChatReq):
         else:
             user_content = f"[File: {att_name}]\n{req.message}" if req.message else f"[File: {att_name}]"
 
+    if link_url:
+        user_content = f"{user_content}\n[Link: {link_url}]" if user_content else f"[Link: {link_url}]"
+
     add_message(cid, "user", user_content, agent=agent_id,
-                att_type=att_type, att_name=att_name, att_data=att_data)
+                att_type=att_type, att_name=att_name, att_data=att_data, link_url=link_url)
 
     history = get_messages(cid, limit=80)
     api_msgs = []
@@ -759,6 +768,8 @@ async def chat(req: ChatReq):
             content = msg["content"]
             if msg.get("attachment_name") and msg.get("attachment_data"):
                 content += f"\n[Attached: {msg['attachment_name']}]"
+            if msg.get("link_url"):
+                content += f"\n[Link: {msg['link_url']}]"
             api_msgs.append({"role": msg["role"], "content": content})
 
     async def generate():
@@ -820,14 +831,17 @@ async def save_settings(req: Request):
     for pid, p in PROVIDERS.items():
         key_field = p["key_env"].lower()  # e.g., "groq_api_key" or "ollama_base_url"
         base_field = f"{pid}_base_url"
+        updated = False
         if body.get(key_field):
             provider_keys[pid] = body[key_field]
-            provider_cooldown.pop(pid, None)
+            updated = True
         if body.get(base_field):
             if pid == "ollama":
                 provider_keys[pid] = body[base_field]
             else:
                 provider_base_urls[pid] = body[base_field]
+            updated = True
+        if updated:
             provider_cooldown.pop(pid, None)
     return {"ok": True, "active": [pid for pid in PROVIDERS if provider_keys.get(pid)]}
 

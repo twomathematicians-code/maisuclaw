@@ -146,6 +146,8 @@ body>*{position:relative;z-index:1}
 .att-preview img{max-width:100%;display:block}
 .att-file{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:3px;font-family:var(--mono);font-size:10px;color:var(--tx2);border:1px solid var(--bd)}
 .att-file .af-ic{font-size:14px}.att-file .af-sz{margin-left:auto;color:var(--mt)}
+.att-link a{color:var(--ac);text-decoration:none}
+.att-link a:hover{text-decoration:underline}
 
 /* Swarm */
 .sc{background:var(--bg3);border:1px solid var(--bd);border-radius:3px;padding:8px 12px;margin:0 auto;max-width:720px;width:100%;animation:fi .12s}
@@ -265,7 +267,7 @@ body>*{position:relative;z-index:1}
     <button class="mbtn" id="agenticToggle" onclick="toggleAgentic()">&#x2295; Agentic</button>
     <div class="acw" id="agentCountWrap">
       <span>AGENTS</span>
-      <input type="number" id="agentCount" min="1" max="6" value="3">
+      <input type="number" id="agentCount" min="1" value="3">
     </div>
   </div>
   <div class="hd">
@@ -391,7 +393,14 @@ function attachLink(){
   const input=document.getElementById('linkInput');
   let url=input.value.trim();
   if(!url)return;
-  if(!/^https?:\/\//i.test(url))url=`https://${url}`;
+  try{
+    const parsed=new URL(url);
+    if(!/^https?:$/.test(parsed.protocol))throw new Error('Invalid protocol');
+    url=parsed.href;
+  }catch(e){
+    alert('Please enter a valid http(s) URL.');
+    return;
+  }
   pendingLink=url;
   input.value=url;
   updatePreviewBar();
@@ -453,7 +462,7 @@ async function toggleAudio(){
     recording=true;
     document.getElementById('audioBtn').classList.add('rec');
   }catch(e){
-    alert('Unable to access microphone.');
+    alert(`Unable to access microphone: ${e&&e.message?e.message:'Unknown error'}`);
   }
 }
 
@@ -603,7 +612,7 @@ async function loadMsgs(id){
     const r=await fetch(`/api/conversations/${id}`),d=await r.json();
     const mc=document.getElementById('mc');mc.innerHTML='';
     d.messages.forEach(m=>{
-      if(m.role==='user')addU(m.content,m.attachment_type,m.attachment_name,m.attachment_data);
+      if(m.role==='user')addU(m.content,m.attachment_type,m.attachment_name,m.attachment_data,m.link_url);
       else addA(m.content,m.agent||'chat',false);
     });
     scr();loadConv();
@@ -616,25 +625,25 @@ function qs(t){document.getElementById('ui').value=t;send()}
 async function send(){
   const inp=document.getElementById('ui'),msg=inp.value.trim();
   const link=pendingLink?pendingLink.trim():'';
-  const message=[msg,link].filter(Boolean).join('\n');
-  if((!message&&!pendingFile)||gen)return;
+  if((!msg&&!pendingFile&&!link)||gen)return;
   gen=true;document.getElementById('sB').disabled=true;document.getElementById('stB').classList.add('vis');
   const w=document.getElementById('wl');if(w)w.style.display='none';
 
   const file=pendingFile;
-  const displayMessage=message||`[Uploaded: ${file?file.name:'file'}]`;
-  addU(displayMessage,file?file.type:null,file?file.name:null,file?file.base64:null);
+  const displayMessage=msg||`${file?`[Uploaded: ${file.name}]`:''}`;
+  addU(displayMessage,file?file.type:null,file?file.name:null,file?file.base64:null,link||null);
   inp.value='';aR(inp);clearFile();clearLink();scr();
   const mid=document.getElementById('msel').value;
 
   try{
     ctrl=new AbortController();
-    const bodyMessage=message||`Please analyze this ${file?file.type:'file'}.`;
+    const bodyMessage=msg||(file?`Please analyze this ${file?file.type:'file'}.`:(link?'Please review this link.':''));
     const body={message:bodyMessage,conversation_id:cur,agent:activeAgent,model_id:mid};
     if(activeAgent==='swarm'){
       const count=parseInt(document.getElementById('agentCount').value,10);
       if(count)body.agent_count=count;
     }
+    if(link)body.link_url=link;
     if(file){body.attachment_type=file.type;body.attachment_name=file.name;body.attachment_data=file.base64}
 
     const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctrl.signal});
@@ -692,18 +701,22 @@ function stop(){if(ctrl)ctrl.abort();if(cur)fetch('/api/stop',{method:'POST',hea
 async function delC(id){if(!confirm('Delete?'))return;await fetch(`/api/conversations/${id}`,{method:'DELETE'});if(cur===id)newChat();loadConv()}
 async function clearChat(){if(!cur)return;if(!confirm('Clear?'))return;await fetch(`/api/conversations/${cur}/clear`,{method:'POST'});loadMsgs(cur)}
 
-function addU(c,attType,attName,attData){
+function addU(c,attType,attName,attData,linkUrl){
   const mc=document.getElementById('mc'),d=document.createElement('div');d.className='msg usr';
   let attHTML='';
+  if(linkUrl){
+    const safe=esc(linkUrl);
+    attHTML+=`<div class="att-file att-link"><span class="af-ic">&#x1F517;</span><a href="${safe}" target="_blank" rel="noopener">${safe}</a></div>`;
+  }
   if(attName){
     if(attType&&attType.startsWith('image/')&&attData){
-      attHTML=`<div class="att-preview"><img src="data:${attType};base64,${attData}" alt="${esc(attName)}"></div>`;
+      attHTML+=`<div class="att-preview"><img src="data:${attType};base64,${attData}" alt="${esc(attName)}"></div>`;
     }else if(attType&&attType.startsWith('audio/')&&attData){
-      attHTML=`<div class="att-preview"><audio controls src="data:${attType};base64,${attData}"></audio></div>`;
+      attHTML+=`<div class="att-preview"><audio controls src="data:${attType};base64,${attData}"></audio></div>`;
     }else if(attType&&attType.startsWith('video/')&&attData){
-      attHTML=`<div class="att-preview"><video controls src="data:${attType};base64,${attData}"></video></div>`;
+      attHTML+=`<div class="att-preview"><video controls src="data:${attType};base64,${attData}"></video></div>`;
     }else{
-      attHTML=`<div class="att-file"><span class="af-ic">&#x1F4C4;</span><span>${esc(attName)}</span></div>`;
+      attHTML+=`<div class="att-file"><span class="af-ic">&#x1F4C4;</span><span>${esc(attName)}</span></div>`;
     }
   }
   d.innerHTML=`<div class="av">&#x2200;</div><div><div class="bb">${attHTML}${c?md(c):''}</div></div>`;
@@ -814,7 +827,6 @@ function md(t){
   h=h.replace(/^## (.+)$/gm,'<h3>$1</h3>');
   h=h.replace(/^# (.+)$/gm,'<h2>$1</h2>');
   h=h.replace(/^- (.+)$/gm,'<li>$1</li>');
-  h=h.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
   h=h.replace(/\n/g,'<br>');
   h=h.replace(/<br><(h[2-4]|pre|li)/g,'<$1');
   h=h.replace(/<\/(h[2-4]|pre|li)><br>/g,'</$1>');
