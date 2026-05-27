@@ -244,7 +244,7 @@ body.compact .ip-w textarea{font-size:12px}
     <span class="lg">MAISU<span>CLAW</span></span>
     <span class="v">v2.1</span>
   </div>
-  <div class="sb-p" id="profileCard" onclick="openProfile()" onkeydown="profileKey(event)" tabindex="0">
+  <div class="sb-p" id="profileCard" role="button" aria-label="Open profile" onclick="openProfile()" onkeydown="profileKey(event)" tabindex="0">
     <div class="sb-av" id="profileAvatar">&#x2200;</div>
     <div class="sb-info">
       <div class="sb-name" id="profileName">Mathematician</div>
@@ -629,11 +629,15 @@ function setCurrentConversation(id){
   localStorage.removeItem('mc_new_chat');
 }
 
+function clearStoredConversation(){
+  localStorage.removeItem('mc_last_conversation');
+}
+
 async function resumeConversation(list){
   if(localStorage.getItem('mc_new_chat')==='1')return;
   const last=localStorage.getItem('mc_last_conversation');
   let target=last?list.find(c=>c.id===last):null;
-  if(last && !target)localStorage.removeItem('mc_last_conversation');
+  if(last && !target)clearStoredConversation();
   if(!target && list.length)target=list[0];
   if(target)await loadMsgs(target.id);
 }
@@ -663,7 +667,7 @@ function updateWelcome(){
 function newChat(){
   cur=null;
   localStorage.setItem('mc_new_chat','1');
-  localStorage.removeItem('mc_last_conversation');
+  clearStoredConversation();
   document.getElementById('mc').innerHTML=renderWelcome();
   updateFoInfo();
   loadConv();
@@ -748,7 +752,6 @@ async function delC(id){
   if(!confirm('Delete?'))return;
   await fetch(`/api/conversations/${id}`,{method:'DELETE'});
   if(cur===id){
-    localStorage.removeItem('mc_last_conversation');
     newChat();
   }
   loadConv();
