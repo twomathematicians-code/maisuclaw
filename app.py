@@ -1,56 +1,166 @@
 """
-MaisuClaw — AI Chat Assistant (Cloud-Hosted)
-=============================================
-Deploys to Render.com free tier — auto-deploys from GitHub.
-Uses Groq (free) for blazing-fast AI inference.
+╔══════════════════════════════════════════════════════════════╗
+║  MAISUCLAW — Open Source Agent Swarm System                ║
+║  One-click deploy · Free cloud AI · Multi-agent reasoning   ║
+╚══════════════════════════════════════════════════════════════╝
+
+Deploy: Push to GitHub → Connect to Render.com → Add GROQ_API_KEY → Live
+
+Architecture:
+  User → App (FastAPI) → Swarm Coordinator → Agent Pool → Cloud LLM
+                                                    ├─ Research Agent
+                                                    ├─ Code Agent
+                                                    ├─ Writer Agent
+                                                    ├─ Analyst Agent
+                                                    ├─ Search Agent
+                                                    └─ Chat Agent (default)
 """
 
-import os
-import json
-import time
-import sqlite3
-import uuid
-import asyncio
+import os, json, time, sqlite3, uuid, asyncio, re
 from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import httpx
 
-# ── Config ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# CONFIG
+# ═══════════════════════════════════════════════════════════════
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GROQ_URL = "https://api.groq.com/openai/v1"
 OPENROUTER_URL = "https://openrouter.ai/api/v1"
 PORT = int(os.environ.get("PORT", "8000"))
 
-# SQLite — Render.com free tier has read-only filesystem except /tmp
-DB_PATH = os.environ.get("DATABASE_URL", f"file:{os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maisuclaw.db')}?mode=rwc&_journal_mode=WAL")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = f"file:{os.path.join(BASE_DIR, 'maisuclaw.db')}?mode=rwc&_journal_mode=WAL"
 
-# ── Models ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# MODELS (all free-tier)
+# ═══════════════════════════════════════════════════════════════
+
 MODELS = [
-    {"id": "llama-3.3-70b-versatile",  "name": "Llama 3.3 70B",   "provider": "groq",       "tier": 3, "desc": "Most powerful, fast"},
-    {"id": "llama-3.1-8b-instant",     "name": "Llama 3.1 8B",    "provider": "groq",       "tier": 1, "desc": "Fastest responses"},
-    {"id": "llama3-70b-8192",          "name": "Llama 3 70B",     "provider": "groq",       "tier": 3, "desc": "Powerful general model"},
-    {"id": "mixtral-8x7b-32768",       "name": "Mixtral 8x7B",    "provider": "groq",       "tier": 2, "desc": "MoE architecture"},
-    {"id": "gemma2-9b-it",             "name": "Gemma 2 9B",      "provider": "groq",       "tier": 2, "desc": "Google model"},
-    {"id": "deepseek-r1-distill-llama-70b", "name": "DeepSeek R1 70B", "provider": "groq", "tier": 3, "desc": "Reasoning model"},
-    {"id": "meta-llama/llama-3.1-8b-instruct:free", "name": "Llama 3.1 8B (OR Free)", "provider": "openrouter", "tier": 1, "desc": "Free via OpenRouter"},
-    {"id": "google/gemma-2-9b-it:free",          "name": "Gemma 2 9B (OR Free)",  "provider": "openrouter", "tier": 2, "desc": "Free via OpenRouter"},
+    {"id": "llama-3.3-70b-versatile",       "name": "Llama 3.3 70B",     "provider": "groq",       "tier": 3},
+    {"id": "llama-3.1-8b-instant",          "name": "Llama 3.1 8B",      "provider": "groq",       "tier": 1},
+    {"id": "llama3-70b-8192",               "name": "Llama 3 70B",       "provider": "groq",       "tier": 3},
+    {"id": "mixtral-8x7b-32768",            "name": "Mixtral 8x7B",      "provider": "groq",       "tier": 2},
+    {"id": "gemma2-9b-it",                  "name": "Gemma 2 9B",        "provider": "groq",       "tier": 2},
+    {"id": "deepseek-r1-distill-llama-70b", "name": "DeepSeek R1 70B",   "provider": "groq",       "tier": 3},
+    {"id": "qwen-qwq-32b",                  "name": "Qwen QWQ 32B",       "provider": "groq",       "tier": 3},
+    {"id": "meta-llama/llama-3.1-8b-instruct:free", "name": "Llama 3.1 8B (OR)", "provider": "openrouter", "tier": 1},
+    {"id": "google/gemma-2-9b-it:free",              "name": "Gemma 2 9B (OR)",  "provider": "openrouter", "tier": 2},
 ]
 
-SYSTEM_PROMPT = (
-    "You are MaisuClaw, a helpful AI assistant. "
-    "Be thorough, accurate, and friendly. "
-    "Use markdown formatting for code blocks and structured responses."
-)
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+
+# ═══════════════════════════════════════════════════════════════
+# AGENT SWARM DEFINITIONS
+# ═══════════════════════════════════════════════════════════════
+
+AGENTS = {
+    "chat": {
+        "name": "Chat",
+        "icon": "💬",
+        "color": "#7c5cfc",
+        "system_prompt": (
+            "You are MaisuClaw, a friendly and powerful AI assistant. "
+            "Answer questions helpfully using markdown formatting. "
+            "Be concise but thorough. Use code blocks for code."
+        ),
+    },
+    "researcher": {
+        "name": "Researcher",
+        "icon": "🔍",
+        "color": "#06b6d4",
+        "system_prompt": (
+            "You are a deep research agent. Your job is to:\n"
+            "1. Break down complex topics systematically\n"
+            "2. Provide comprehensive, well-structured analysis\n"
+            "3. Include facts, data points, and multiple perspectives\n"
+            "4. Cite sources and distinguish facts from opinions\n"
+            "5. Use clear sections with headers\n\n"
+            "Format: Use ## headers, bullet points, and numbered lists. "
+            "Be thorough but organized."
+        ),
+    },
+    "coder": {
+        "name": "Coder",
+        "icon": "⚡",
+        "color": "#22c55e",
+        "system_prompt": (
+            "You are an expert coding agent. Your job is to:\n"
+            "1. Write clean, production-ready code\n"
+            "2. Always specify the language in code blocks\n"
+            "3. Explain your approach briefly before writing code\n"
+            "4. Include error handling and best practices\n"
+            "5. Suggest optimizations when relevant\n\n"
+            "Always wrap code in ```language ... ``` blocks. "
+            "Add brief comments for complex logic."
+        ),
+    },
+    "writer": {
+        "name": "Writer",
+        "icon": "✍️",
+        "color": "#f472b6",
+        "system_prompt": (
+            "You are a skilled writing agent. Your job is to:\n"
+            "1. Write in a natural, engaging, human-like style\n"
+            "2. Match the requested tone (formal, casual, creative, etc.)\n"
+            "3. Use vivid language and varied sentence structures\n"
+            "4. Organize content with clear paragraphs and sections\n"
+            "5. Avoid robotic phrasing, cliches, and filler words\n\n"
+            "Write compelling content that feels authentic and well-crafted."
+        ),
+    },
+    "analyst": {
+        "name": "Analyst",
+        "icon": "📊",
+        "color": "#f59e0b",
+        "system_prompt": (
+            "You are a data and business analyst agent. Your job is to:\n"
+            "1. Analyze data, trends, and patterns\n"
+            "2. Provide actionable insights and recommendations\n"
+            "3. Use structured frameworks (SWOT, pros/cons, etc.)\n"
+            "4. Include metrics, comparisons, and visual descriptions\n"
+            "5. Present findings in clear, executive-ready format\n\n"
+            "Use tables (markdown), bullet points, and numbered rankings. "
+            "Be data-driven and objective."
+        ),
+    },
+    "tutor": {
+        "name": "Tutor",
+        "icon": "🎓",
+        "color": "#8b5cf6",
+        "system_prompt": (
+            "You are a patient, expert tutor. Your job is to:\n"
+            "1. Explain concepts step-by-step from basics\n"
+            "2. Use analogies and real-world examples\n"
+            "3. Ask guiding questions to check understanding\n"
+            "4. Break complex topics into digestible parts\n"
+            "5. Encourage and motivate the learner\n\n"
+            "Use simple language first, then add complexity. "
+            "Use formatting like **bold** for key terms."
+        ),
+    },
+    "swarm": {
+        "name": "Swarm (All Agents)",
+        "icon": "🐝",
+        "color": "#ef4444",
+        "system_prompt": "",  # Dynamically built
+    },
+}
 
 
-# ── Database ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# DATABASE
+# ═══════════════════════════════════════════════════════════════
+
 def get_db():
     conn = sqlite3.connect(DB_PATH, uri=True)
     conn.row_factory = sqlite3.Row
@@ -58,14 +168,14 @@ def get_db():
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
-
 def init_db():
     conn = get_db()
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             title TEXT DEFAULT 'New Chat',
-            model_id TEXT NOT NULL DEFAULT 'llama-3.3-70b-versatile',
+            agent TEXT DEFAULT 'chat',
+            model_id TEXT DEFAULT '""" + DEFAULT_MODEL + """',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -75,6 +185,7 @@ def init_db():
             conversation_id TEXT NOT NULL,
             role TEXT NOT NULL,
             content TEXT NOT NULL,
+            agent TEXT DEFAULT 'chat',
             model_id TEXT,
             timestamp TEXT NOT NULL,
             duration_ms INTEGER DEFAULT 0,
@@ -85,18 +196,15 @@ def init_db():
     conn.commit()
     conn.close()
 
-
-# ── DB Helpers ───────────────────────────────────────────
-def create_conversation(model_id: str = "llama-3.3-70b-versatile") -> str:
+def create_conversation(agent="chat", model_id=DEFAULT_MODEL):
     cid = str(uuid.uuid4())[:8]
     now = datetime.utcnow().isoformat()
     conn = get_db()
-    conn.execute("INSERT INTO conversations (id,title,model_id,created_at,updated_at) VALUES (?,?,?,?,?)",
-                 (cid, "New Chat", model_id, now, now))
+    conn.execute("INSERT INTO conversations (id,title,agent,model_id,created_at,updated_at) VALUES (?,?,?,?,?,?)",
+                 (cid, f"New Chat", agent, model_id, now, now))
     conn.commit()
     conn.close()
     return cid
-
 
 def list_conversations(limit=50):
     conn = get_db()
@@ -104,13 +212,11 @@ def list_conversations(limit=50):
     conn.close()
     return [dict(r) for r in rows]
 
-
 def get_conversation(cid):
     conn = get_db()
     row = conn.execute("SELECT * FROM conversations WHERE id=?", (cid,)).fetchone()
     conn.close()
     return dict(row) if row else None
-
 
 def delete_conversation(cid):
     conn = get_db()
@@ -119,24 +225,14 @@ def delete_conversation(cid):
     conn.commit()
     conn.close()
 
-
-def update_title(cid, title):
-    conn = get_db()
-    conn.execute("UPDATE conversations SET title=?, updated_at=? WHERE id=?",
-                 (title, datetime.utcnow().isoformat(), cid))
-    conn.commit()
-    conn.close()
-
-
-def add_message(cid, role, content, model_id=None, duration_ms=0):
+def add_message(cid, role, content, agent="chat", model_id=None, duration_ms=0):
     conn = get_db()
     conn.execute(
-        "INSERT INTO messages (conversation_id,role,content,model_id,timestamp,duration_ms) VALUES (?,?,?,?,?,?)",
-        (cid, role, content, model_id, datetime.utcnow().isoformat(), duration_ms))
+        "INSERT INTO messages (conversation_id,role,content,agent,model_id,timestamp,duration_ms) VALUES (?,?,?,?,?,?,?)",
+        (cid, role, content, agent, model_id, datetime.utcnow().isoformat(), duration_ms))
     conn.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.utcnow().isoformat(), cid))
     conn.commit()
     conn.close()
-
 
 def get_messages(cid, limit=200):
     conn = get_db()
@@ -145,7 +241,6 @@ def get_messages(cid, limit=200):
     conn.close()
     return [dict(r) for r in rows]
 
-
 def clear_messages(cid):
     conn = get_db()
     conn.execute("DELETE FROM messages WHERE conversation_id=?", (cid,))
@@ -153,232 +248,298 @@ def clear_messages(cid):
     conn.close()
 
 
-# ── Cloud AI Client ─────────────────────────────────────
-async def stream_groq(messages, model="llama-3.3-70b-versatile", temperature=0.7, max_tokens=8192):
-    """Stream from Groq API."""
-    if not GROQ_API_KEY:
-        raise Exception("Groq API key not set. Add GROQ_API_KEY environment variable in Render.com dashboard.")
+# ═══════════════════════════════════════════════════════════════
+# CLOUD LLM STREAMING
+# ═══════════════════════════════════════════════════════════════
 
-    payload = {
-        "model": model, "messages": messages,
-        "stream": True, "temperature": temperature, "max_tokens": max_tokens,
-    }
-
-    async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", f"{GROQ_URL}/chat/completions",
-                                 json=payload,
-                                 headers={"Authorization": f"Bearer {GROQ_API_KEY}",
-                                          "Content-Type": "application/json"}) as resp:
-            if resp.status_code != 200:
-                body = await resp.aread()
-                raise Exception(f"Groq error {resp.status_code}: {body.decode()[:300]}")
-            async for line in resp.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                data = line[6:]
-                if data.strip() == "[DONE]":
-                    return
-                try:
-                    chunk = json.loads(data)
-                    content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                    if content:
-                        yield content
-                except json.JSONDecodeError:
-                    continue
-
-
-async def stream_openrouter(messages, model, temperature=0.7, max_tokens=8192):
-    """Stream from OpenRouter API."""
-    if not OPENROUTER_API_KEY:
-        raise Exception("OpenRouter API key not set. Add OPENROUTER_API_KEY in Render dashboard.")
-
-    payload = {
-        "model": model, "messages": messages,
-        "stream": True, "temperature": temperature, "max_tokens": max_tokens,
-    }
-
-    async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("POST", f"{OPENROUTER_URL}/chat/completions",
-                                 json=payload,
-                                 headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                                          "Content-Type": "application/json",
-                                          "HTTP-Referer": "https://maisuclaw.app",
-                                          "X-Title": "MaisuClaw"}) as resp:
-            if resp.status_code != 200:
-                body = await resp.aread()
-                raise Exception(f"OpenRouter error {resp.status_code}: {body.decode()[:300]}")
-            async for line in resp.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                data = line[6:]
-                if data.strip() == "[DONE]":
-                    return
-                try:
-                    chunk = json.loads(data)
-                    content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                    if content:
-                        yield content
-                except json.JSONDecodeError:
-                    continue
-
-
-async def stream_chat(messages, model_id="llama-3.3-70b-versatile", temperature=0.7):
-    """Route to correct provider and stream."""
-    model_cfg = next((m for m in MODELS if m["id"] == model_id), None)
-    if not model_cfg:
+async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_tokens=8192):
+    """Stream from Groq or OpenRouter."""
+    m = next((m for m in MODELS if m["id"] == model_id), None)
+    if not m:
         raise Exception(f"Unknown model: {model_id}")
 
-    if model_cfg["provider"] == "groq":
-        async for chunk in stream_groq(messages, model_id, temperature):
-            yield chunk
-    elif model_cfg["provider"] == "openrouter":
-        async for chunk in stream_openrouter(messages, model_id, temperature):
-            yield chunk
-    else:
-        raise Exception(f"Unknown provider: {model_cfg['provider']}")
+    provider = m["provider"]
+    if provider == "groq" and not GROQ_API_KEY:
+        raise Exception("Groq API key not set. Add GROQ_API_KEY in Render dashboard.")
+    if provider == "openrouter" and not OPENROUTER_API_KEY:
+        raise Exception("OpenRouter key not set. Add OPENROUTER_API_KEY in Render dashboard.")
+
+    url = GROQ_URL if provider == "groq" else OPENROUTER_URL
+    key = GROQ_API_KEY if provider == "groq" else OPENROUTER_API_KEY
+
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    if provider == "openrouter":
+        headers["HTTP-Referer"] = "https://maisuclaw.app"
+        headers["X-Title"] = "MaisuClaw"
+
+    payload = {"model": model_id, "messages": messages, "stream": True,
+               "temperature": temperature, "max_tokens": max_tokens}
+
+    async with httpx.AsyncClient(timeout=180) as client:
+        async with client.stream("POST", f"{url}/chat/completions",
+                                 json=payload, headers=headers) as resp:
+            if resp.status_code != 200:
+                body = await resp.aread()
+                raise Exception(f"API error {resp.status_code}: {body.decode()[:400]}")
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data.strip() == "[DONE]":
+                    return
+                try:
+                    chunk = json.loads(data)
+                    text = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                    if text:
+                        yield text
+                except json.JSONDecodeError:
+                    continue
 
 
-# ── App ─────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# SWARM COORDINATOR
+# ═══════════════════════════════════════════════════════════════
+
+async def run_single_agent(agent_id, messages, model_id, temperature):
+    """Run a single agent and stream output."""
+    agent = AGENTS[agent_id]
+    sys_msg = {"role": "system", "content": agent["system_prompt"]}
+    all_msgs = [sys_msg] + messages
+    async for chunk in stream_llm(all_msgs, model_id, temperature):
+        yield {"agent": agent_id, "content": chunk}
+
+
+async def run_swarm(query, model_id, temperature):
+    """
+    Swarm mode: Coordinator decides which agents to use,
+    then runs them sequentially, combining results.
+    """
+    swarm_prompt = (
+        "You are the Swarm Coordinator. Given the user query, decide which agents "
+        "should handle it. Reply in this EXACT JSON format only, nothing else:\n"
+        '{"agents": ["coder", "researcher"], "plan": "brief plan"}\n\n'
+        "Available agents: " + ", ".join(k for k in AGENTS if k != "swarm") + "\n\n"
+        f"User query: {query}"
+    )
+
+    # Ask coordinator which agents to use
+    coord_msgs = [{"role": "user", "content": swarm_prompt}]
+    coord_response = ""
+    async for chunk in stream_llm(coord_msgs, model_id, 0.3, 1024):
+        coord_response += chunk
+
+    # Parse agent selection
+    try:
+        json_match = re.search(r'\{[^}]+\}', coord_response, re.DOTALL)
+        if json_match:
+            plan = json.loads(json_match.group())
+            selected_agents = plan.get("agents", ["chat"])
+            plan_text = plan.get("plan", "Processing...")
+        else:
+            selected_agents = ["chat"]
+            plan_text = "Processing with default agent"
+    except (json.JSONDecodeError, KeyError):
+        selected_agents = ["chat"]
+        plan_text = "Processing with default agent"
+
+    # Filter to valid agents
+    valid = [a for a in selected_agents if a in AGENTS and a != "swarm"]
+    if not valid:
+        valid = ["chat"]
+
+    yield {"type": "swarm_plan", "agents": valid, "plan": plan_text}
+
+    # Run each selected agent
+    for agent_id in valid:
+        yield {"type": "agent_start", "agent": agent_id}
+        agent = AGENTS[agent_id]
+        user_msgs = [{"role": "user", "content": query}]
+
+        # For swarm, give agents context about other agents running
+        if len(valid) > 1:
+            ctx = f"[Swarm Mode] Multiple agents are collaborating. You are the {agent['name']} agent. Focus on your specialty. User query: {query}"
+            user_msgs = [{"role": "user", "content": ctx}]
+
+        sys_msg = {"role": "system", "content": agent["system_prompt"]}
+        all_msgs = [sys_msg] + user_msgs
+
+        response = ""
+        async for chunk in stream_llm(all_msgs, model_id, temperature):
+            response += chunk
+            yield {"type": "agent_chunk", "agent": agent_id, "content": chunk}
+
+        yield {"type": "agent_done", "agent": agent_id, "full_response": response}
+
+
+# ═══════════════════════════════════════════════════════════════
+# FASTAPI APP
+# ═══════════════════════════════════════════════════════════════
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    print("=" * 50)
-    print("  MaisuClaw is LIVE")
-    print(f"  Groq key: {'SET' if GROQ_API_KEY else 'NOT SET'}")
-    print(f"  OpenRouter key: {'SET' if OPENROUTER_API_KEY else 'NOT SET'}")
-    print("=" * 50)
+    print("╔══════════════════════════════════════════════╗")
+    print("║  MAISUCLAW AGENT SWARM — LIVE               ║")
+    print(f"║  Groq:       {'✓ READY' if GROQ_API_KEY else '✗ NO KEY'}                        ║")
+    print(f"║  OpenRouter: {'✓ READY' if OPENROUTER_API_KEY else '✗ NO KEY'}                        ║")
+    print("║  Agents:     7 (Chat, Research, Code, ...)    ║")
+    print(f"║  URL:        http://localhost:{PORT}               ║")
+    print("╚══════════════════════════════════════════════╝")
     yield
 
-app = FastAPI(title="MaisuClaw", lifespan=lifespan)
+app = FastAPI(title="MaisuClaw Agent Swarm", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 
 
-# ── Request Models ───────────────────────────────────────
+# ── Request Models ────────────────────────────────────────
 class ChatReq(BaseModel):
     message: str
     conversation_id: Optional[str] = None
-    model_id: Optional[str] = "llama-3.3-70b-versatile"
-
-class StopReq(BaseModel):
-    conversation_id: str
-
-class TitleReq(BaseModel):
-    conversation_id: str
-    title: str
+    agent: Optional[str] = "chat"
+    model_id: Optional[str] = DEFAULT_MODEL
 
 
-# ── Active Streams (for stop) ───────────────────────────
+# ── Active Streams ───────────────────────────────────────
 active_streams = {}
 
 
-# ── Routes ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# ROUTES
+# ═══════════════════════════════════════════════════════════════
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    with open(os.path.join(os.path.dirname(__file__), "static", "index.html"), "r") as f:
+    with open(os.path.join(BASE_DIR, "static", "index.html"), "r") as f:
         return HTMLResponse(f.read())
 
 
 @app.get("/api/status")
 async def status():
-    available_models = []
+    avail = []
     for m in MODELS:
-        avail = False
-        if m["provider"] == "groq" and GROQ_API_KEY:
-            avail = True
-        elif m["provider"] == "openrouter" and OPENROUTER_API_KEY:
-            avail = True
-        available_models.append({**m, "available": avail})
+        a = (m["provider"] == "groq" and GROQ_API_KEY) or (m["provider"] == "openrouter" and OPENROUTER_API_KEY)
+        avail.append({**m, "available": bool(a)})
     return {
-        "version": "0.3.0",
+        "version": "1.0.0",
         "groq_ready": bool(GROQ_API_KEY),
         "openrouter_ready": bool(OPENROUTER_API_KEY),
-        "models": available_models,
+        "models": avail,
+        "agents": {k: {"name": v["name"], "icon": v["icon"], "color": v["color"]} for k, v in AGENTS.items()},
     }
 
 
 @app.get("/api/conversations")
-async def api_list_convos():
+async def api_list():
     return {"conversations": list_conversations()}
 
 
 @app.get("/api/conversations/{cid}")
-async def api_get_convo(cid: str):
-    conv = get_conversation(cid)
-    if not conv:
+async def api_get(cid: str):
+    c = get_conversation(cid)
+    if not c:
         raise HTTPException(404, "Not found")
-    return {"conversation": conv, "messages": get_messages(cid)}
+    return {"conversation": c, "messages": get_messages(cid)}
 
 
 @app.post("/api/conversations")
-async def api_create_convo():
-    cid = create_conversation()
+async def api_create(req: dict):
+    agent = req.get("agent", "chat")
+    mid = req.get("model_id", DEFAULT_MODEL)
+    cid = create_conversation(agent, mid)
     return {"conversation_id": cid}
 
 
-@app.put("/api/conversations/title")
-async def api_update_title(req: TitleReq):
-    update_title(req.conversation_id, req.title)
-    return {"ok": True}
-
-
 @app.delete("/api/conversations/{cid}")
-async def api_delete_convo(cid: str):
+async def api_delete(cid: str):
     delete_conversation(cid)
     return {"ok": True}
 
 
 @app.post("/api/conversations/{cid}/clear")
-async def api_clear_convo(cid: str):
+async def api_clear(cid: str):
     clear_messages(cid)
     return {"ok": True}
 
 
 @app.post("/api/chat")
 async def chat(req: ChatReq):
-    cid = req.conversation_id or create_conversation(req.model_id)
-    add_message(cid, "user", req.message)
+    agent_id = req.agent if req.agent in AGENTS else "chat"
+    cid = req.conversation_id or create_conversation(agent_id, req.model_id)
+    add_message(cid, "user", req.message, agent=agent_id)
 
-    # Build message history
     history = get_messages(cid, limit=80)
-    api_msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    api_msgs = []
     for msg in history:
-        api_msgs.append({"role": msg["role"], "content": msg["content"]})
+        if msg["role"] in ("user", "assistant"):
+            api_msgs.append({"role": msg["role"], "content": msg["content"]})
 
     async def generate():
         start = time.time()
-        full = ""
-        stream_key = f"{cid}_{start}"
-        task = asyncio.current_task()
-        active_streams[stream_key] = task
+        skey = f"{cid}_{start}"
+        active_streams[skey] = asyncio.current_task()
 
         try:
-            async for chunk in stream_chat(api_msgs, req.model_id):
-                full += chunk
-                yield f"data: {json.dumps({'content': chunk, 'done': False})}\n\n"
+            if agent_id == "swarm":
+                # Swarm mode — multi-agent
+                full_parts = {}  # agent_id -> content
+                async for event in run_swarm(req.message, req.model_id, 0.7):
+                    etype = event.get("type", "")
 
-            ms = int((time.time() - start) * 1000)
-            add_message(cid, "assistant", full, model_id=req.model_id, duration_ms=ms)
-            yield f"data: {json.dumps({'done': True, 'duration_ms': ms})}\n\n"
+                    if etype == "swarm_plan":
+                        add_message(cid, "assistant", f"🐝 **Swarm Plan:** {event['plan']}\nAgents: {', '.join(a['name'] for a in AGENTS.values() if a != 'swarm' and a in event.get('agents', []))}", agent="swarm")
+                        yield f"data: {json.dumps({'event': 'swarm_plan', 'agents': event['agents'], 'plan': event['plan']})}\n\n"
+
+                    elif etype == "agent_start":
+                        agent_info = AGENTS.get(event["agent"], {})
+                        yield f"data: {json.dumps({'event': 'agent_start', 'agent': event['agent'], 'name': agent_info.get('name',''), 'icon': agent_info.get('icon',''), 'color': agent_info.get('color','')})}\n\n"
+
+                    elif etype == "agent_chunk":
+                        full_parts.setdefault(event["agent"], "")
+                        full_parts[event["agent"]] += event["content"]
+                        yield f"data: {json.dumps({'event': 'agent_chunk', 'agent': event['agent'], 'content': event['content']})}\n\n"
+
+                    elif etype == "agent_done":
+                        add_message(cid, "assistant", event["full_response"], agent=event["agent"])
+                        yield f"data: {json.dumps({'event': 'agent_done', 'agent': event['agent']})}\n\n"
+
+                ms = int((time.time() - start) * 1000)
+                yield f"data: {json.dumps({'event': 'done', 'duration_ms': ms})}\n\n"
+
+            else:
+                # Single agent mode
+                full = ""
+                agent = AGENTS[agent_id]
+                sys_msg = {"role": "system", "content": agent["system_prompt"]}
+                all_msgs = [sys_msg] + api_msgs
+
+                async for chunk in stream_llm(all_msgs, req.model_id):
+                    full += chunk
+                    yield f"data: {json.dumps({'event': 'chunk', 'content': chunk})}\n\n"
+
+                ms = int((time.time() - start) * 1000)
+                add_message(cid, "assistant", full, agent=agent_id, model_id=req.model_id, duration_ms=ms)
+                yield f"data: {json.dumps({'event': 'done', 'duration_ms': ms})}\n\n"
 
         except Exception as e:
             err = str(e)
-            add_message(cid, "assistant", f"[Error] {err}", model_id=req.model_id)
-            yield f"data: {json.dumps({'error': err, 'done': True})}\n\n"
+            add_message(cid, "assistant", f"[Error] {err}", agent=agent_id)
+            yield f"data: {json.dumps({'event': 'error', 'error': err})}\n\n"
 
         finally:
-            active_streams.pop(stream_key, None)
+            active_streams.pop(skey, None)
 
     return StreamingResponse(generate(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.post("/api/stop")
-async def stop(req: StopReq):
+async def stop(req: dict):
+    cid = req.get("conversation_id", "")
     stopped = 0
     to_del = []
     for key, task in active_streams.items():
-        if key.startswith(req.conversation_id):
+        if key.startswith(cid):
             if not task.done():
                 task.cancel()
                 stopped += 1
@@ -390,51 +551,15 @@ async def stop(req: StopReq):
 
 @app.post("/api/settings")
 async def save_settings(req: Request):
-    """Save API keys. On Render.com, this updates environment variables via their API.
-    For local use, this is informational — set keys in .env or Render dashboard instead."""
     body = await req.json()
-    # On Render.com, env vars are set in the dashboard, not via API from the app itself.
-    # This endpoint just confirms the keys were received and tells the user to set them in Render.
-    groq = body.get("groq_api_key", "")
-    orkey = body.get("openrouter_api_key", "")
-
-    # For local development, we can update a .env file
-    try:
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-        lines = []
-        if os.path.exists(env_path):
-            with open(env_path) as f:
-                lines = f.readlines()
-
-        env_map = {}
-        for line in lines:
-            line = line.strip()
-            if "=" in line and not line.startswith("#"):
-                k, v = line.split("=", 1)
-                env_map[k.strip()] = v.strip()
-
-        if groq:
-            env_map["GROQ_API_KEY"] = groq
-        if orkey:
-            env_map["OPENROUTER_API_KEY"] = orkey
-
-        with open(env_path, "w") as f:
-            for k, v in env_map.items():
-                f.write(f"{k}={v}\n")
-    except Exception:
-        pass
-
-    # Update runtime globals
     global GROQ_API_KEY, OPENROUTER_API_KEY
-    if groq:
-        GROQ_API_KEY = groq
-    if orkey:
-        OPENROUTER_API_KEY = orkey
+    if body.get("groq_api_key"):
+        GROQ_API_KEY = body["groq_api_key"]
+    if body.get("openrouter_api_key"):
+        OPENROUTER_API_KEY = body["openrouter_api_key"]
+    return {"ok": True}
 
-    return {"ok": True, "message": "Settings saved. If on Render.com, also add keys in Environment Variables."}
 
-
-# ── Run ─────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=PORT)

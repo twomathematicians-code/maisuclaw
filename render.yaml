@@ -1,8 +1,3 @@
-# MaisuClaw v0.3.0 — Auto-Deploy to Render.com
-# ================================================
-# Push this repo to GitHub, then connect it to Render.com.
-# It will auto-build and go live.
-
 services:
   - type: web
     name: maisuclaw
