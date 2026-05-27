@@ -1,101 +1,108 @@
 """
-services/github_backup.py — auto-backup chat history to a private GitHub repo
+maisuclaw v0.3.0 — GitHub Backup Service
+Backs up chat history to a GitHub repository.
 """
+
 import json
-import time
-import subprocess
-import tempfile
-from pathlib import Path
+import httpx
 from datetime import datetime
+from typing import Optional
 
-from config import (
-    GITHUB_BACKUP_ENABLED,
-    GITHUB_TOKEN,
-    GITHUB_USERNAME,
-    GITHUB_REPO,
-    DB_PATH,
-)
+from config import GITHUB_TOKEN, GITHUB_REPO, GITHUB_BACKUP_BRANCH
 
 
-def _repo_url() -> str:
-    return f"https://{GITHUB_TOKEN}@github.com/{GITHUB_USERNAME}/{GITHUB_REPO}.git"
+class GitHubBackup:
+    """Back up conversations to GitHub."""
 
+    def __init__(self):
+        self.token = GITHUB_TOKEN
+        self.repo = GITHUB_REPO
+        self.branch = GITHUB_BACKUP_BRANCH
+        self.base_url = "https://api.github.com"
 
-def _is_configured() -> bool:
-    return all([
-        GITHUB_BACKUP_ENABLED,
-        GITHUB_TOKEN,
-        GITHUB_USERNAME,
-        GITHUB_REPO,
-    ])
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.token and self.repo)
 
-
-def _export_chats() -> str:
-    """Export all conversations from SQLite to JSON text."""
-    from services.memory import _conn
-    with _conn() as conn:
-        rows = conn.execute(
-            "SELECT session_id, role, content, model, ts FROM conversations ORDER BY session_id, ts"
-        ).fetchall()
-    return json.dumps([dict(r) for r in rows], ensure_ascii=False, indent=1)
-
-
-def _export_notes() -> str:
-    """Export all notes to JSON text."""
-    from services.memory import _conn
-    with _conn() as conn:
-        rows = conn.execute("SELECT * FROM notes ORDER BY ts").fetchall()
-    return json.dumps([dict(r) for r in rows], ensure_ascii=False, indent=1)
-
-
-def run_backup() -> dict:
-    """
-    Export chats + notes and push to GitHub.
-    Returns a status dict.
-    """
-    if not _is_configured():
-        return {"ok": False, "error": "GitHub backup not configured. Edit config.py."}
-
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    try:
-        # 1. Export data
-        chats = _export_chats()
-        notes = _export_notes()
-
-        # 2. Write to temp files
-        tmp = Path(tempfile.mkdtemp(prefix="maisuclaw_backup_"))
-        (tmp / "chats.json").write_text(chats, encoding="utf-8")
-        (tmp / "notes.json").write_text(notes, encoding="utf-8")
-        (tmp / "last_backup.txt").write_text(
-            f"Last backup: {timestamp}\n"
-            f"Chats: {len(json.loads(chats))} messages\n"
-            f"Notes: {len(json.loads(notes))} notes\n",
-            encoding="utf-8",
-        )
-
-        # 3. Git push
-        url = _repo_url()
-        tmp_git = tmp / ".git"
-        if tmp_git.exists():
-            _run(["git", "init"], str(tmp))
-
-        _run(["git", "add", "-A"], str(tmp))
-        _run(["git", "commit", "-m", f"backup: {timestamp}"], str(tmp))
-        result = _run(["git", "push", "-f", url, "HEAD:main"], str(tmp))
-
+    def _headers(self) -> dict:
         return {
-            "ok": True,
-            "timestamp": timestamp,
-            "message_count": len(json.loads(chats)),
-            "note_count": len(json.loads(notes)),
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github.v3+json",
         }
 
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+    async def backup_conversation(self, conv_id: str, title: str, messages: list[dict]):
+        """Backup a conversation to GitHub."""
+        if not self.is_configured:
+            return {"status": "not_configured", "message": "GitHub token/repo not set"}
+
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        path = f"chats/{conv_id}_{timestamp}.json"
+        content = json.dumps({
+            "conversation_id": conv_id,
+            "title": title,
+            "backed_up_at": datetime.utcnow().isoformat(),
+            "messages": messages,
+        }, indent=2, ensure_ascii=False)
+
+        # Convert to base64
+        import base64
+        b64_content = base64.b64encode(content.encode()).decode()
+
+        # Check if branch exists, create if not
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Check/create branch
+            default_resp = await client.get(
+                f"{self.base_url}/repos/{self.repo}",
+                headers=self._headers()
+            )
+            if default_resp.status_code != 200:
+                return {"status": "error", "message": f"Cannot access repo: {default_resp.status_code}"}
+
+            default_branch = default_resp.json().get("default_branch", "main")
+            sha_resp = await client.get(
+                f"{self.base_url}/repos/{self.repo}/git/ref/heads/{self.branch}",
+                headers=self._headers()
+            )
+            if sha_resp.status_code == 404:
+                # Create branch from default
+                ref_resp = await client.get(
+                    f"{self.base_url}/repos/{self.repo}/git/ref/heads/{default_branch}",
+                    headers=self._headers()
+                )
+                if ref_resp.status_code != 200:
+                    return {"status": "error", "message": "Cannot get default branch SHA"}
+                sha = ref_resp.json()["object"]["sha"]
+                await client.post(
+                    f"{self.base_url}/repos/{self.repo}/git/refs",
+                    headers=self._headers(),
+                    json={"ref": f"refs/heads/{self.branch}", "sha": sha}
+                )
+
+            # Create or update file
+            # First check if file exists
+            existing = await client.get(
+                f"{self.base_url}/repos/{self.repo}/contents/{path}",
+                headers=self._headers(),
+                params={"ref": self.branch}
+            )
+            payload = {
+                "message": f"Backup chat: {title}",
+                "content": b64_content,
+                "branch": self.branch,
+            }
+            if existing.status_code == 200:
+                payload["sha"] = existing.json()["sha"]
+
+            resp = await client.put(
+                f"{self.base_url}/repos/{self.repo}/contents/{path}",
+                headers=self._headers(),
+                json=payload
+            )
+
+            if resp.status_code in (200, 201):
+                return {"status": "success", "path": path}
+            else:
+                return {"status": "error", "message": resp.text}
 
 
-def _run(args, cwd):
-    result = subprocess.run(args, capture_output=True, text=True, cwd=cwd, timeout=60)
-    if result.returncode != 0 and "nothing to commit" not in result.stdout:
-        raise RuntimeError(f"{' '.join(args)} failed: {result.stderr}")
-    return result.stdout
+github_backup = GitHubBackup()

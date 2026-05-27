@@ -1,33 +1,24 @@
-# ── Python ──────────────────────────────────────────────────
+# Python
+venv/
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.egg-info/
 dist/
 build/
-*.egg
-.venv/
-venv/
-env/
 
-# ── IDE ────────────────────────────────────────────────────
+# Data (local only)
+data/
+uploads/
+
+# Environment
+.env
+
+# IDE
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 
-# ── OS ─────────────────────────────────────────────────────
+# OS
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# ── maisuclaw data (don't commit personal data) ────────────
-data/memory.db
-data/memory.db-wal
-data/memory.db-shm
-data/uploads/
-
-# ── env / secrets ──────────────────────────────────────────
-.env
-.env.*

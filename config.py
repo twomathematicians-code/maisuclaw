@@ -1,77 +1,189 @@
 """
-maisuclaw configuration  v0.3.0
-===============================
-Edit the values below to match your setup.
+maisuclaw v0.3.0 — Configuration
+Supports: Local Ollama + Cloud (Groq, OpenRouter)
 """
 
-from pathlib import Path
+import os
+from dataclasses import dataclass, field
+from typing import Optional
 
-# ── paths ──────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-UPLOAD_DIR = DATA_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / "memory.db"
+# ── Paths ──────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+DB_PATH = os.path.join(DATA_DIR, "maisuclaw.db")
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ── ollama ─────────────────────────────────────────────────────────
-OLLAMA_BASE_URL = "http://localhost:11434"
+# ── Server ─────────────────────────────────────────────
+HOST = os.getenv("MAISUCLAW_HOST", "0.0.0.0")
+PORT = int(os.getenv("MAISUCLAW_PORT", "8000"))
 
-# ── model tiers ───────────────────────────────────────────────────
-MODEL_INSTANT   = "qwen2.5:0.5b"
-MODEL_FAST      = "phi3.5:latest"
-MODEL_CODER     = "qwen2.5-coder:7b"
-MODEL_GENERAL   = "gemma2:9b"
-MODEL_POWERFUL  = "qwen2.5:14b"
-MODEL_REASONING = "deepseek-r1:8b"
-MODEL_VISION    = "llava:13b"            # image/screenshot analysis
-MODEL_VISION_LITE = "minicpm-v:8b"      # lighter vision model
-MODEL_EMBED     = "nomic-embed-text"
-MODEL_STT       = "whisper:small"
+# ── Ollama (Local) ────────────────────────────────────
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "120"))
 
-MODEL_OPTIONS = {
-    "auto":      "Auto (best pick)",
-    "instant":   f"Instant — {MODEL_INSTANT}",
-    "fast":      f"Fast — {MODEL_FAST}",
-    "balanced":  f"Balanced — {MODEL_GENERAL}",
-    "coder":     f"Coder — {MODEL_CODER}",
-    "powerful":  f"Powerful — {MODEL_POWERFUL}",
-    "reasoning": f"Reasoning — {MODEL_REASONING}",
-    "vision":    f"Vision — {MODEL_VISION}",
-}
+# ── Groq Cloud (Free Tier) ────────────────────────────
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
-# ── server ─────────────────────────────────────────────────────────
-HOST = "0.0.0.0"
-PORT = 8000
+# ── OpenRouter Cloud (Free Models Available) ──────────
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-# ── agent ──────────────────────────────────────────────────────────
-MAX_TOOL_ROUNDS = 5
-CHAT_HISTORY_LIMIT = 10
+# ── GitHub Backup ─────────────────────────────────────
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_REPO = os.getenv("GITHUB_REPO", "")
+GITHUB_BACKUP_BRANCH = "chat-backup"
 
-SYSTEM_PROMPT = (
-    "You are maisuclaw, a powerful personal AI assistant running entirely on the user's laptop.\n"
-    "You have access to tools — use them whenever needed.\n"
-    "You can analyze images, read PDFs, browse the web, write code, do research, and more.\n"
-    "Always answer in the same language the user writes in.\n"
-    "Be thorough, accurate, and helpful. When you use a tool, explain what you did."
-)
+# ── Whisper (Voice) ──────────────────────────────────
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 
-# ── remote access ─────────────────────────────────────────────────
-# Cloudflare Tunnel / Tailscale — set to True when tunnel is active
-REMOTE_ACCESS_ENABLED = False
-PUBLIC_URL = ""  # e.g. "https://your-name.trycloudflare.com"
 
-# ── GitHub cloud backup ───────────────────────────────────────────
-GITHUB_BACKUP_ENABLED = False
-GITHUB_TOKEN = ""
-GITHUB_USERNAME = ""
-GITHUB_REPO = "maisuclaw-chats"
-GITHUB_BACKUP_INTERVAL = 3600
+@dataclass
+class ModelConfig:
+    """Single model entry."""
+    id: str
+    name: str
+    provider: str            # "ollama" | "groq" | "openrouter"
+    tier: int = 1            # 1=lightweight, 2=standard, 3=powerful
+    supports_vision: bool = False
+    supports_tools: bool = True
+    max_tokens: int = 4096
+    description: str = ""
+    is_free: bool = True
 
-# ── research ───────────────────────────────────────────────────────
-RESEARCH_MAX_SOURCES = 5
-RESEARCH_DEPTH = 2  # how many levels of sub-questions
 
-# ── allowed upload types ──────────────────────────────────────────
-ALLOWED_IMAGE_TYPES = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
-ALLOWED_DOC_TYPES   = {"pdf", "txt", "md", "csv", "json", "py", "js", "html", "css"}
-MAX_UPLOAD_SIZE_MB = 50
+@dataclass
+class AppConfig:
+    """Full application configuration."""
+    models: list[ModelConfig] = field(default_factory=list)
+    default_model: str = "llama3"
+    system_prompt: str = (
+        "You are MaisuClaw, a powerful local AI assistant. "
+        "You help with coding, research, writing, analysis, and general questions. "
+        "Be thorough, accurate, and helpful. Use tools when available."
+    )
+
+    def __post_init__(self):
+        self.models = self._build_models()
+
+    def _build_models(self) -> list[ModelConfig]:
+        models = [
+            # ── Ollama Local Models ──
+            ModelConfig(
+                id="llama3", name="Llama 3 (8B)", provider="ollama", tier=1,
+                max_tokens=8192,
+                description="Fast & capable general-purpose model"
+            ),
+            ModelConfig(
+                id="llama3:70b", name="Llama 3 (70B)", provider="ollama", tier=3,
+                max_tokens=8192,
+                description="Most powerful Llama 3 variant"
+            ),
+            ModelConfig(
+                id="mistral", name="Mistral (7B)", provider="ollama", tier=1,
+                max_tokens=4096,
+                description="Efficient & fast reasoning"
+            ),
+            ModelConfig(
+                id="codellama", name="Code Llama (7B)", provider="ollama", tier=1,
+                max_tokens=16384,
+                description="Code generation & understanding"
+            ),
+            ModelConfig(
+                id="deepseek-coder:6.7b", name="DeepSeek Coder (6.7B)", provider="ollama", tier=1,
+                max_tokens=16384,
+                description="Excellent coding model"
+            ),
+            ModelConfig(
+                id="gemma2:2b", name="Gemma 2 (2B)", provider="ollama", tier=1,
+                max_tokens=8192,
+                description="Google's lightweight model"
+            ),
+            ModelConfig(
+                id="phi3:mini", name="Phi-3 Mini (3.8B)", provider="ollama", tier=1,
+                max_tokens=8192,
+                description="Microsoft's compact but capable model"
+            ),
+            ModelConfig(
+                id="qwen2.5:7b", name="Qwen 2.5 (7B)", provider="ollama", tier=1,
+                max_tokens=8192,
+                description="Alibaba's multilingual model"
+            ),
+            ModelConfig(
+                id="nomic-embed-text", name="Nomic Embed", provider="ollama", tier=1,
+                supports_tools=False, max_tokens=8192,
+                description="Embedding model for RAG"
+            ),
+            ModelConfig(
+                id="llava", name="LLaVA (Vision)", provider="ollama", tier=2,
+                supports_vision=True, max_tokens=4096,
+                description="Vision model for image analysis"
+            ),
+            ModelConfig(
+                id="llava:13b", name="LLaVA 13B (Vision)", provider="ollama", tier=3,
+                supports_vision=True, max_tokens=4096,
+                description="More powerful vision model"
+            ),
+
+            # ── Groq Cloud Models (Free Tier) ──
+            ModelConfig(
+                id="llama-3.3-70b-versatile", name="Llama 3.3 70B (Groq)", provider="groq", tier=3,
+                supports_tools=True, supports_vision=False, max_tokens=32768,
+                description="Lightning-fast cloud inference via Groq"
+            ),
+            ModelConfig(
+                id="llama-3.1-8b-instant", name="Llama 3.1 8B (Groq)", provider="groq", tier=1,
+                supports_tools=True, max_tokens=32768,
+                description="Instant cloud inference via Groq"
+            ),
+            ModelConfig(
+                id="mixtral-8x7b-32768", name="Mixtral 8x7B (Groq)", provider="groq", tier=2,
+                supports_tools=True, max_tokens=32768,
+                description="MoE architecture, fast cloud inference"
+            ),
+            ModelConfig(
+                id="gemma2-9b-it", name="Gemma 2 9B (Groq)", provider="groq", tier=2,
+                supports_tools=True, max_tokens=32768,
+                description="Google Gemma 2 via Groq"
+            ),
+            ModelConfig(
+                id="meta-llama/llama-4-scout-17b-16e-instruct", name="Llama 4 Scout (Groq)", provider="groq", tier=3,
+                supports_tools=True, max_tokens=32768,
+                description="Latest Llama 4 via Groq"
+            ),
+
+            # ── OpenRouter Cloud Models (Free) ──
+            ModelConfig(
+                id="meta-llama/llama-3.1-8b-instruct:free", name="Llama 3.1 8B (OpenRouter Free)", provider="openrouter", tier=1,
+                supports_tools=True, max_tokens=8192,
+                description="Free Llama 3.1 via OpenRouter"
+            ),
+            ModelConfig(
+                id="google/gemma-2-9b-it:free", name="Gemma 2 9B (OpenRouter Free)", provider="openrouter", tier=2,
+                supports_tools=True, max_tokens=8192,
+                description="Free Gemma 2 via OpenRouter"
+            ),
+            ModelConfig(
+                id="qwen/qwen-2.5-7b-instruct:free", name="Qwen 2.5 7B (OpenRouter Free)", provider="openrouter", tier=1,
+                supports_tools=True, max_tokens=8192,
+                description="Free Qwen 2.5 via OpenRouter"
+            ),
+        ]
+
+        # If no cloud API keys, still include them (UI shows them but they need key setup)
+        return models
+
+    def get_model(self, model_id: str) -> Optional[ModelConfig]:
+        for m in self.models:
+            if m.id == model_id:
+                return m
+        return None
+
+    def get_models_by_provider(self, provider: str) -> list[ModelConfig]:
+        return [m for m in self.models if m.provider == provider]
+
+
+# Global config instance
+config = AppConfig()
