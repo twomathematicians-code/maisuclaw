@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import httpx
+from config import OPENROUTER_REFERER
 
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
@@ -269,7 +270,7 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
 
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if provider == "openrouter":
-        headers["HTTP-Referer"] = "https://maisuclaw.app"
+        headers["HTTP-Referer"] = OPENROUTER_REFERER
         headers["X-Title"] = "MaisuClaw"
 
     payload = {"model": model_id, "messages": messages, "stream": True,

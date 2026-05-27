@@ -30,6 +30,7 @@ GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 # ── OpenRouter Cloud (Free Models Available) ──────────
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_REFERER = os.getenv("OPENROUTER_REFERER", "https://maisuclaw.onrender.com")
 
 # ── GitHub Backup ─────────────────────────────────────
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
