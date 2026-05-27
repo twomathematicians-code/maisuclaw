@@ -1,0 +1,22 @@
+[flake8]
+# Match the CI workflow settings
+max-line-length = 127
+max-complexity = 10
+
+# The workflow currently runs `flake8 .`, so ensure we don't lint virtualenvs,
+# caches, build artifacts, or other non-source directories.
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    .eggs,
+    *.egg-info,
+    .tox,
+    .mypy_cache,
+    .pytest_cache,
+    node_modules,
+    vendor,
+    third_party
