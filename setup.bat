@@ -2,7 +2,7 @@
 chcp 65001 >nul 2>&1
 echo.
 echo  ====================================================
-echo         maisuclaw  setup  v0.1  (Windows)
+echo         maisuclaw  setup  v0.3  (Windows)
 echo  ====================================================
 echo.
 
@@ -44,31 +44,72 @@ echo.
 where ollama >nul 2>&1
 if %errorlevel% equ 0 (
     echo  [OK] Ollama found
+    echo.
+    echo  Pulling model tiers (this will take a while the first time)...
+    echo.
 
-    echo  [..] Pulling models (this may take a while)...
-    ollama pull qwen2.5-coder:7b 2>nul
-    ollama pull gemma2:9b 2>nul
-    ollama pull phi3.5 2>nul
-    ollama pull nomic-embed-text 2>nul
-    echo  [OK] Core models pulled
+    echo  [1/8] qwen2.5:0.5b  (instant - ultra fast)
+    ollama pull qwen2.5:0.5b
+    echo  [OK] Instant model ready
 
-    echo  [..] Pulling whisper:small (optional, for voice)...
-    ollama pull whisper:small 2>nul
-    echo  [OK] Whisper pulled
+    echo  [2/8] phi3.5  (fast - quick answers)
+    ollama pull phi3.5
+    echo  [OK] Fast model ready
+
+    echo  [3/8] gemma2:9b  (balanced - general assistant)
+    ollama pull gemma2:9b
+    echo  [OK] Balanced model ready
+
+    echo  [4/8] qwen2.5-coder:7b  (coder - programming)
+    ollama pull qwen2.5-coder:7b
+    echo  [OK] Coder model ready
+
+    echo  [5/8] qwen2.5:14b  (powerful - best quality)
+    ollama pull qwen2.5:14b
+    echo  [OK] Powerful model ready
+
+    echo  [6/8] llava:13b  (vision - image and PDF analysis)
+    ollama pull llava:13b
+    echo  [OK] Vision model ready
+
+    echo  [7/8] nomic-embed-text  (embeddings for RAG)
+    ollama pull nomic-embed-text
+    echo  [OK] Embedding model ready
+
+    echo  [8/8] whisper:small  (voice input)
+    ollama pull whisper:small
+    echo  [OK] Whisper ready
+
+    echo.
+    echo  ====================================================
+    echo   All 8 models pulled!
+    echo  ====================================================
+    echo.
+    echo  OPTIONAL - pull these for extra power:
+    echo    ollama pull deepseek-r1:8b    (reasoning / thinking)
+    echo    ollama pull minicpm-v:8b      (lighter vision model)
+    echo    ollama pull llama3.1:8b       (alternative general model)
+    echo    ollama pull mistral:7b         (fast and capable)
+    echo.
+
 ) else (
     echo  [WARN] Ollama not found.
     echo         Download it from https://ollama.com/download
-    echo         Then open Ollama and run:
-    echo           ollama pull qwen2.5-coder:7b
-    echo           ollama pull gemma2:9b
+    echo.
+    echo         After installing, open Ollama and run:
+    echo           ollama pull qwen2.5:0.5b
     echo           ollama pull phi3.5
+    echo           ollama pull gemma2:9b
+    echo           ollama pull qwen2.5-coder:7b
+    echo           ollama pull qwen2.5:14b
+    echo           ollama pull llava:13b
     echo           ollama pull nomic-embed-text
     echo           ollama pull whisper:small
 )
 
 :: 7. Playwright (optional)
 echo.
-set /p INSTALL_PW="  Install Playwright for web search? (y/n): "
+set /p INSTALL_PW="  Install Playwright for web search and browsing? (y/n): "
 if /i "%INSTALL_PW%"=="y" (
     echo  [..] Installing Playwright browsers...
     playwright install chromium
@@ -79,18 +120,16 @@ if /i "%INSTALL_PW%"=="y" (
 
 echo.
 echo  ====================================================
-echo         Setup complete!
+echo         Setup complete! (v0.3)
 echo  ====================================================
 echo.
-echo  To start maisuclaw, run:
-echo.
+echo  To start maisuclaw:
 echo    setup_run.bat
 echo.
-echo  Or manually:
-echo    venv\Scripts\activate
-echo    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+echo  For remote access (use from anywhere):
+echo    scripts\cloudflare_tunnel.bat
 echo.
-echo  Then open http://localhost:8000 in your browser.
-echo  From your phone: http://YOUR-LAP-IP:8000
+echo  To upload files, paste screenshots, or do research:
+echo    Open http://localhost:8000 and use the UI
 echo.
 pause

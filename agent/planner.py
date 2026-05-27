@@ -1,8 +1,9 @@
 """
 agent/planner.py — the agent loop: decide → tool → LLM → respond
+Supports both streaming and non-streaming modes.
 """
 import json
-from services.ollama import chat as ollama_chat
+from services.ollama import chat as ollama_chat, chat_stream as ollama_stream
 from config import SYSTEM_PROMPT, MAX_TOOL_ROUNDS
 
 
@@ -80,33 +81,35 @@ def _parse_tool_call(text: str) -> dict | None:
     return None
 
 
+def _needs_tools(message: str) -> bool:
+    """Quick heuristic: does this message likely need tools?"""
+    lower = message.lower()
+    tool_hints = {
+        "list file", "read file", "write file", "run code", "execute",
+        "search", "save note", "browse", "open", "show me", "what files",
+        "git status", "git log", "create file", "write a script",
+        "my desktop", "my documents", "directory", "folder",
+    }
+    return any(hint in lower for hint in tool_hints)
+
+
 def run_agent(
     messages: list[dict],
     model: str,
-    tool_executor: callable,   # function(tool_name, params) -> str
+    tool_executor: callable,
     max_rounds: int = None,
 ) -> str:
-    """
-    Agent loop:
-      1. Build prompt with tool list
-      2. Call LLM
-      3. If LLM wants a tool → execute → feed result back → goto 2
-      4. Otherwise return the final reply
-    """
+    """Non-streaming agent loop."""
     max_rounds = max_rounds or MAX_TOOL_ROUNDS
-
     system_msg = {"role": "system", "content": SYSTEM_PROMPT + TOOL_PROMPT}
     full_messages = [system_msg] + messages
 
     for _ in range(max_rounds):
         reply = ollama_chat(model, full_messages)
-
         tool_call = _parse_tool_call(reply)
         if tool_call is None:
-            # No tool call — final answer
             return reply
 
-        # Execute tool
         tool_name = tool_call["tool"]
         params = tool_call.get("params", {})
         try:
@@ -114,11 +117,75 @@ def run_agent(
         except Exception as e:
             result = f"Tool error: {e}"
 
-        # Feed result back to LLM
         full_messages.append({"role": "assistant", "content": reply})
         full_messages.append({
             "role": "user",
             "content": f"Tool `{tool_name}` returned:\n```\n{result}\n```\nNow continue your response.",
         })
 
-    return reply  # fallback after max rounds
+    return reply
+
+
+def run_agent_stream(
+    messages: list[dict],
+    model: str,
+    tool_executor: callable,
+    max_rounds: int = None,
+):
+    """
+    Streaming agent loop — yields dicts:
+      {"type": "token", "content": "...", "model": "..."}
+      {"type": "tool", "name": "...", "result": "..."}
+      {"type": "done", "full_reply": "...", "model": "..."}
+    """
+    max_rounds = max_rounds or MAX_TOOL_ROUNDS
+    system_msg = {"role": "system", "content": SYSTEM_PROMPT + TOOL_PROMPT}
+    full_messages = [system_msg] + messages
+
+    last_message = messages[-1]["content"] if messages else ""
+
+    # Quick check: skip tools entirely for simple questions
+    if not _needs_tools(last_message):
+        full_reply = ""
+        for chunk in ollama_stream(model, [{"role": "system", "content": SYSTEM_PROMPT}] + messages):
+            full_reply += chunk["content"]
+            yield {"type": "token", "content": chunk["content"], "model": chunk["model"]}
+        yield {"type": "done", "full_reply": full_reply, "model": model}
+        return
+
+    # Agent loop with streaming on the FINAL round
+    for round_i in range(max_rounds):
+        is_final_attempt = (round_i == max_rounds - 1) or True  # always try streaming
+
+        if is_final_attempt:
+            # Stream this round
+            reply = ""
+            for chunk in ollama_stream(model, full_messages):
+                reply += chunk["content"]
+                yield {"type": "token", "content": chunk["content"], "model": chunk["model"]}
+        else:
+            reply = ollama_chat(model, full_messages)
+
+        tool_call = _parse_tool_call(reply)
+        if tool_call is None:
+            yield {"type": "done", "full_reply": reply, "model": model}
+            return
+
+        tool_name = tool_call["tool"]
+        params = tool_call.get("params", {})
+        yield {"type": "tool", "name": tool_name}
+
+        try:
+            result = tool_executor(tool_name, params)
+        except Exception as e:
+            result = f"Tool error: {e}"
+
+        yield {"type": "tool_result", "name": tool_name, "result": result[:500]}
+
+        full_messages.append({"role": "assistant", "content": reply})
+        full_messages.append({
+            "role": "user",
+            "content": f"Tool `{tool_name}` returned:\n```\n{result}\n```\nNow continue your response.",
+        })
+
+    yield {"type": "done", "full_reply": reply, "model": model}

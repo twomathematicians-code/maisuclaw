@@ -8,11 +8,14 @@ python-multipart>=0.0.6
 # HTTP client (for Ollama API)
 requests>=2.31.0
 
-# Browser automation (optional — for web search tool)
-playwright>=1.40.0
-
 # Math for embeddings
 numpy>=1.26.0
 
-# Pydantic (usually bundled with FastAPI, but explicit)
+# Pydantic (usually bundled with FastAPI)
 pydantic>=2.5.0
+
+# PDF extraction (optional — graceful fallback if missing)
+PyMuPDF>=1.23.0
+
+# Browser automation (optional — for web search tool)
+playwright>=1.40.0
