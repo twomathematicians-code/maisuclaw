@@ -489,7 +489,11 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
                             current_provider_id = fm["provider"]
                             tried.append(current_provider_id)
                             print(f"  [Failover] Switching to {fm['name']} on {PROVIDERS[current_provider_id]['name']}")
-                            yield f"data: {json.dumps({'event':'info','content':f\"Switching to {PROVIDERS[current_provider_id]['name']} ({current_model}) due to rate limit...\"})}\n\n"
+                            info_message = (
+                                f"Switching to {PROVIDERS[current_provider_id]['name']} "
+                                f"({current_model}) due to rate limit..."
+                            )
+                            yield f"data: {json.dumps({'event':'info','content': info_message})}\n\n"
                             continue
                         else:
                             raise Exception(f"All providers rate-limited. Please wait {COOLDOWN_SECONDS}s or add more API keys.")
@@ -508,7 +512,8 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
                                 current_provider_id = fm["provider"]
                                 tried.append(current_provider_id)
                                 print(f"  [Failover] Error {resp.status_code} from {p['name']}. Switching to {PROVIDERS[current_provider_id]['name']}")
-                                yield f"data: {json.dumps({'event':'info','content':f\"Switching to {PROVIDERS[current_provider_id]['name']}...\"})}\n\n"
+                                info_message = f"Switching to {PROVIDERS[current_provider_id]['name']}..."
+                                yield f"data: {json.dumps({'event':'info','content': info_message})}\n\n"
                                 continue
 
                         raise Exception(f"API error {resp.status_code}: {error_msg}")
@@ -548,7 +553,8 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
                 current_provider_id = fm["provider"]
                 tried.append(current_provider_id)
                 print(f"  [Failover] Connection error from {p['name']}. Switching to {PROVIDERS[current_provider_id]['name']}")
-                yield f"data: {json.dumps({'event':'info','content':f\"Connection error. Switching to {PROVIDERS[current_provider_id]['name']}...\"})}\n\n"
+                info_message = f"Connection error. Switching to {PROVIDERS[current_provider_id]['name']}..."
+                yield f"data: {json.dumps({'event':'info','content': info_message})}\n\n"
                 continue
             raise Exception(f"Connection failed to {p['name']} and all fallback providers.")
 
