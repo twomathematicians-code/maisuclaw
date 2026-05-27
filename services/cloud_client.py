@@ -132,7 +132,7 @@ class OpenRouterClient:
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://maisuclaw.local",
+            "HTTP-Referer": "https://maisuclaw.onrender.com",
             "X-Title": "MaisuClaw",
         }
 
