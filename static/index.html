@@ -244,7 +244,7 @@ body.compact .ip-w textarea{font-size:12px}
     <span class="lg">MAISU<span>CLAW</span></span>
     <span class="v">v2.1</span>
   </div>
-  <div class="sb-p" id="profileCard" onclick="openProfile()">
+  <div class="sb-p" id="profileCard" onclick="openProfile()" onkeydown="profileKey(event)" tabindex="0">
     <div class="sb-av" id="profileAvatar">&#x2200;</div>
     <div class="sb-info">
       <div class="sb-name" id="profileName">Mathematician</div>
@@ -364,6 +364,8 @@ body.compact .ip-w textarea{font-size:12px}
 let cur=null,gen=false,ctrl=null,agents={},models=[],activeAgent='chat',providerStatus={};
 let pendingFile=null;
 let conversations=[];
+const DEFAULT_AVATAR_SYMBOL='∀';
+const TOAST_DURATION_MS=2200;
 const profileDefaults={name:'Mathematician',tag:'Research Lab',symbol:''};
 const uiDefaults={grid:true,glow:true,compact:false};
 let profile={...profileDefaults};
@@ -380,6 +382,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   await resumeConversation(list);
   aR(document.getElementById('ui'));
   setupDragDrop();
+  document.addEventListener('keydown',handleEscape);
 });
 document.getElementById('ui').addEventListener('input',function(){aR(this)});
 function aR(e){e.style.height='auto';e.style.height=Math.min(e.scrollHeight,120)+'px'}
@@ -444,7 +447,7 @@ function loadProfile(){
 }
 function calcSymbol(name){
   const parts=(name||'').trim().split(/\s+/).filter(Boolean);
-  if(!parts.length)return '∀';
+  if(!parts.length)return DEFAULT_AVATAR_SYMBOL;
   return parts.slice(0,2).map(p=>p[0].toUpperCase()).join('');
 }
 function applyProfile(){
@@ -455,6 +458,12 @@ function applyProfile(){
   if(pn)pn.textContent=profile.name||profileDefaults.name;
   if(pt)pt.textContent=profile.tag||profileDefaults.tag;
   updateWelcome();
+}
+function profileKey(e){
+  if(e.key==='Enter'||e.key===' '){
+    e.preventDefault();
+    openProfile();
+  }
 }
 function openProfile(){
   document.getElementById('profileNameIn').value=profile.name||'';
@@ -482,6 +491,14 @@ function resetProfile(){
 function userBadge(){return profile.symbol||calcSymbol(profile.name)}
 
 // ── UI Preferences ──
+function handleEscape(e){
+  if(e.key!=='Escape')return;
+  const setM=document.getElementById('setM');
+  const profM=document.getElementById('profileM');
+  if(setM&&setM.classList.contains('on'))closeSet();
+  if(profM&&profM.classList.contains('on'))closeProfile();
+}
+
 function loadUiSettings(){
   try{uiSettings={...uiDefaults,...JSON.parse(localStorage.getItem('mc_ui')||'{}')}}catch(e){uiSettings={...uiDefaults}}
   syncUiSettings();
@@ -516,7 +533,7 @@ function showToast(msg, tone){
   t.className=`toast on ${tone||''}`;
   t.textContent=msg;
   clearTimeout(toastTimeout);
-  toastTimeout=setTimeout(()=>{t.className='toast'},2200);
+  toastTimeout=setTimeout(()=>{t.className='toast'},TOAST_DURATION_MS);
 }
 
 // ── Status & Init ──
@@ -615,9 +632,9 @@ function setCurrentConversation(id){
 async function resumeConversation(list){
   if(localStorage.getItem('mc_new_chat')==='1')return;
   const last=localStorage.getItem('mc_last_conversation');
-  let target=list.find(c=>c.id===last);
+  let target=last?list.find(c=>c.id===last):null;
   if(last && !target)localStorage.removeItem('mc_last_conversation');
-  if(!target)target=list[0];
+  if(!target && list.length)target=list[0];
   if(target)await loadMsgs(target.id);
 }
 
@@ -627,7 +644,7 @@ function renderWelcome(){
   return `<div class="wl" id="wl">
       <div class="formula">&#x222B; f(x)dx</div>
       <h1>MAISUCLAW</h1>
-      <p>Welcome back, ${esc(name)}. ${esc(roleTag)} is ready.</p>
+      <p>Welcome back, ${esc(name)}${roleTag?` · ${esc(roleTag)}`:''}.</p>
       <div class="fo-info" id="foInfo"></div>
       <div class="qk">
         <button onclick="qs('Research the latest breakthroughs in quantum computing')">Research</button>
@@ -748,7 +765,8 @@ function addU(c,attType,attName,attData){
       attHTML=`<div class="att-file"><span class="af-ic">&#x1F4C4;</span><span>${esc(attName)}</span></div>`;
     }
   }
-  d.innerHTML=`<div class="av">${userBadge()}</div><div><div class="bb">${attHTML}${c?md(c):''}</div></div>`;
+  const badge=esc(userBadge());
+  d.innerHTML=`<div class="av">${badge}</div><div><div class="bb">${attHTML}${c?md(c):''}</div></div>`;
   mc.appendChild(d);return d;
 }
 
