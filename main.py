@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
-from config import config, UPLOAD_DIR
+from config import config, UPLOAD_DIR, HOST, PORT
 from database import (
     create_conversation, get_conversation, list_conversations,
     delete_conversation, update_conversation_title,
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
         print("              Start with: ollama serve")
     print(f"  Groq:       {'READY' if status['groq']['available'] else 'No API key'}")
     print(f"  OpenRouter: {'READY' if status['openrouter']['available'] else 'No API key'}")
-    print(f"\n  Access: http://localhost:{config.PORT}")
+    print(f"\n  Access: http://localhost:{PORT}")
     print("=" * 50 + "\n")
 
     yield
@@ -344,4 +344,4 @@ async def api_save_settings(req: dict):
 # ── Run ────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host=config.HOST, port=config.PORT, reload=True)
+    uvicorn.run("main:app", host=HOST, port=PORT, reload=True)
