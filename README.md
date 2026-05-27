@@ -38,12 +38,17 @@ Agent Swarm System v2.1 — 7 free AI providers (including Ollama), auto-failove
 - **7 Specialized Agents** — Pick one or use Swarm for multi-agent collaboration
 - **45+ Models** — All free: Llama 3.3 70B, DeepSeek R1, Qwen, Gemini, Phi-4, Mistral, Command R+, CodeLlama...
 - **File Upload** — Photos, PDFs, code files, any type (up to 20MB)
+- **Audio Chat** — Record or upload audio clips
+- **Video Upload** — Attach short videos (up to 20MB)
+- **Link Attachments** — Add reference URLs directly in chat
 - **Screenshot Paste** — Ctrl+V to paste screenshots directly
 - **Drag & Drop** — Drop files anywhere on the page
 - **Image Preview** — Thumbnails in chat for uploaded images
+- **Agentic Mode Controls** — Configure Swarm agent count
 - **Stop Generation** — Halt streaming responses mid-generation
 - **Chat History** — All conversations saved with sidebar navigation
 - **Mathematical Design** — Clean monospace UI with grid background and math symbols
+- **Custom Provider Endpoints** — Override API base URLs in settings
 - **One-Click Deploy** — Push to GitHub, connect to Render, done
 - **Zero Cost** — Runs on Render.com free tier forever
 

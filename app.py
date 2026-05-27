@@ -136,6 +136,13 @@ for pid, p in PROVIDERS.items():
 if not provider_keys["ollama"]:
     provider_keys["ollama"] = "http://localhost:11434"
 
+# Optional base URL overrides for non-Ollama providers
+provider_base_urls = {}
+for pid, p in PROVIDERS.items():
+    if pid == "ollama":
+        continue
+    provider_base_urls[pid] = os.environ.get(f"{pid.upper()}_BASE_URL", p["url"])
+
 # Provider cooldown tracking (for auto-failover)
 provider_cooldown = {}  # {provider_id: cooldown_until_timestamp}
 COOLDOWN_SECONDS = 60  # Wait 60s before retrying a rate-limited provider
@@ -253,11 +260,15 @@ def init_db():
             conversation_id TEXT NOT NULL, role TEXT NOT NULL,
             content TEXT NOT NULL, agent TEXT DEFAULT 'chat',
             model_id TEXT, timestamp TEXT NOT NULL, duration_ms INTEGER DEFAULT 0,
-            attachment_type TEXT, attachment_name TEXT, attachment_data TEXT,
+            attachment_type TEXT, attachment_name TEXT, attachment_data TEXT, link_url TEXT,
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id);
     """)
+    try:
+        conn.execute("ALTER TABLE messages ADD COLUMN link_url TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -286,12 +297,12 @@ def delete_conversation(cid):
     conn.commit(); conn.close()
 
 def add_message(cid, role, content, agent="chat", model_id=None, duration_ms=0,
-                att_type=None, att_name=None, att_data=None):
+                att_type=None, att_name=None, att_data=None, link_url=None):
     conn = get_db()
     conn.execute(
-        "INSERT INTO messages (conversation_id,role,content,agent,model_id,timestamp,duration_ms,attachment_type,attachment_name,attachment_data) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO messages (conversation_id,role,content,agent,model_id,timestamp,duration_ms,attachment_type,attachment_name,attachment_data,link_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         (cid, role, content, agent, model_id, datetime.utcnow().isoformat(), duration_ms,
-         att_type, att_name, att_data))
+         att_type, att_name, att_data, link_url))
     conn.execute("UPDATE conversations SET updated_at=? WHERE id=?", (datetime.utcnow().isoformat(), cid))
     conn.commit(); conn.close()
 
@@ -436,6 +447,9 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
         p = PROVIDERS[current_provider_id]
         k = provider_keys.get(current_provider_id, "")
         is_ollama = p.get("no_key", False)
+        base_url = None
+        if not is_ollama:
+            base_url = provider_base_urls.get(current_provider_id, p["url"]).rstrip("/")
         if not k and not is_ollama:
             break
 
@@ -451,7 +465,7 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
             base_url = k.rstrip("/")
             chat_url = f"{base_url}/v1/chat/completions"
         elif current_provider_id == "cohere":
-            chat_url = f"{p['url']}/chat"
+            chat_url = f"{base_url}/chat"
             payload = {
                 "model": current_model,
                 "message": messages[-1]["content"] if messages else "",
@@ -464,7 +478,7 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
                     payload["preamble"] = msg["content"]
                     break
         else:
-            chat_url = f"{p['url']}/chat/completions"
+            chat_url = f"{base_url}/chat/completions"
             payload = {
                 "model": current_model,
                 "messages": messages,
@@ -565,10 +579,19 @@ async def stream_llm(messages, model_id=DEFAULT_MODEL, temperature=0.7, max_toke
 # SWARM
 # ═══════════════════════════════════════════════════════════════
 
-async def run_swarm(query, model_id, temperature):
+async def run_swarm(query, model_id, temperature, agent_count=None):
+    max_agents = len([k for k in AGENTS if k != "swarm"])
+    count = None
+    if agent_count and max_agents > 0:
+        try:
+            count = max(1, min(int(agent_count), max_agents))
+        except (TypeError, ValueError):
+            count = None
+    count_hint = f"Use up to {count} agents.\n" if count else ""
     swarm_prompt = (
         'You are the Swarm Coordinator. Reply ONLY in JSON: {"agents":["coder","researcher"],"plan":"brief plan"}\n'
         "Available: " + ", ".join(k for k in AGENTS if k != "swarm") + "\n"
+        f"{count_hint}"
         f"Query: {query}"
     )
     coord = ""
@@ -587,6 +610,8 @@ async def run_swarm(query, model_id, temperature):
     except (json.JSONDecodeError, KeyError):
         agents, plan = ["chat"], "Processing"
     if not agents: agents = ["chat"]
+    if count:
+        agents = agents[:count]
 
     yield {"type": "swarm_plan", "agents": agents, "plan": plan}
 
@@ -628,6 +653,8 @@ class ChatReq(BaseModel):
     conversation_id: Optional[str] = None
     agent: Optional[str] = "chat"
     model_id: Optional[str] = DEFAULT_MODEL
+    agent_count: Optional[int] = None
+    link_url: Optional[str] = None
     attachment_type: Optional[str] = None
     attachment_name: Optional[str] = None
     attachment_data: Optional[str] = None
@@ -720,6 +747,7 @@ async def chat(req: ChatReq):
     att_type = req.attachment_type
     att_name = req.attachment_name
     att_data = req.attachment_data
+    link_url = req.link_url
 
     if att_type and att_name:
         if att_type.startswith("image/"):
@@ -727,8 +755,11 @@ async def chat(req: ChatReq):
         else:
             user_content = f"[File: {att_name}]\n{req.message}" if req.message else f"[File: {att_name}]"
 
+    if link_url:
+        user_content = f"{user_content}\n[Link: {link_url}]" if user_content else f"[Link: {link_url}]"
+
     add_message(cid, "user", user_content, agent=agent_id,
-                att_type=att_type, att_name=att_name, att_data=att_data)
+                att_type=att_type, att_name=att_name, att_data=att_data, link_url=link_url)
 
     history = get_messages(cid, limit=80)
     api_msgs = []
@@ -737,6 +768,8 @@ async def chat(req: ChatReq):
             content = msg["content"]
             if msg.get("attachment_name") and msg.get("attachment_data"):
                 content += f"\n[Attached: {msg['attachment_name']}]"
+            if msg.get("link_url"):
+                content += f"\n[Link: {msg['link_url']}]"
             api_msgs.append({"role": msg["role"], "content": content})
 
     async def generate():
@@ -745,7 +778,7 @@ async def chat(req: ChatReq):
         active_streams[skey] = asyncio.current_task()
         try:
             if agent_id == "swarm":
-                async for event in run_swarm(req.message, req.model_id, 0.7):
+                async for event in run_swarm(req.message, req.model_id, 0.7, req.agent_count):
                     et = event.get("type", "")
                     if et == "swarm_plan":
                         yield f"data: {json.dumps({'event':'swarm_plan','agents':event['agents'],'plan':event['plan']})}\n\n"
@@ -797,8 +830,18 @@ async def save_settings(req: Request):
     body = await req.json()
     for pid, p in PROVIDERS.items():
         key_field = p["key_env"].lower()  # e.g., "groq_api_key" or "ollama_base_url"
+        base_field = f"{pid}_base_url"
+        updated = False
         if body.get(key_field):
             provider_keys[pid] = body[key_field]
+            updated = True
+        if body.get(base_field):
+            if pid == "ollama":
+                provider_keys[pid] = body[base_field]
+            else:
+                provider_base_urls[pid] = body[base_field]
+            updated = True
+        if updated:
             provider_cooldown.pop(pid, None)
     return {"ok": True, "active": [pid for pid in PROVIDERS if provider_keys.get(pid)]}
 
@@ -808,11 +851,15 @@ async def api_providers():
     """Get all available providers with their info for settings UI."""
     result = []
     for pid, p in PROVIDERS.items():
+        base_url = provider_keys.get("ollama", "http://localhost:11434") if pid == "ollama" else provider_base_urls.get(pid, p["url"])
+        default_url = "http://localhost:11434" if pid == "ollama" else p["url"]
         result.append({
             "id": pid,
             "name": p["name"],
             "key_env": p["key_env"],
             "has_key": bool(provider_keys.get(pid)),
+            "base_url": base_url,
+            "default_url": default_url,
             "color": p["color"],
             "speed": p["speed"],
             "free_tier": p["free_tier"],

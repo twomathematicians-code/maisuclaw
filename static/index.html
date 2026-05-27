@@ -73,6 +73,18 @@ body>*{position:relative;z-index:1}
 .abtn:hover{border-color:var(--acL,var(--bd));color:var(--tx)}
 .abtn.act{border-color:var(--ac);color:var(--ac);background:var(--acD)}
 
+/* ── Mode Bar ── */
+.mb{padding:6px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mb label{font-family:var(--mono);font-size:9px;color:var(--mt);white-space:nowrap;letter-spacing:.5px}
+.mbtn{padding:4px 10px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--tx2);cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:4px;transition:all .1s;letter-spacing:.2px}
+.mbtn:hover{border-color:var(--ac);color:var(--ac)}
+.mbtn.act{border-color:var(--ac);color:var(--ac);background:var(--acD)}
+.acw{display:none;align-items:center;gap:6px;padding:3px 8px;border:1px solid var(--bd);border-radius:3px;background:var(--bg3)}
+.acw.on{display:flex}
+.acw span{font-family:var(--mono);font-size:8px;color:var(--mt);letter-spacing:.4px}
+.acw input{width:48px;padding:4px 6px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);border-radius:3px;font-family:var(--mono);font-size:10px;text-align:center}
+.acw input:focus{border-color:var(--ac);outline:none}
+
 /* ── Header ── */
 .hd{padding:6px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;background:var(--bg2)}
 .tg{background:none;border:none;color:var(--tx2);cursor:pointer;font-size:16px;padding:2px 4px;border-radius:3px;font-family:var(--mono)}
@@ -134,6 +146,8 @@ body>*{position:relative;z-index:1}
 .att-preview img{max-width:100%;display:block}
 .att-file{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:3px;font-family:var(--mono);font-size:10px;color:var(--tx2);border:1px solid var(--bd)}
 .att-file .af-ic{font-size:14px}.att-file .af-sz{margin-left:auto;color:var(--mt)}
+.att-link a{color:var(--ac);text-decoration:none}
+.att-link a:hover{text-decoration:underline}
 
 /* Swarm */
 .sc{background:var(--bg3);border:1px solid var(--bd);border-radius:3px;padding:8px 12px;margin:0 auto;max-width:720px;width:100%;animation:fi .12s}
@@ -165,7 +179,17 @@ body>*{position:relative;z-index:1}
 .stp:hover{background:var(--red);color:#fff}
 .att-btn{width:38px;height:38px;border-radius:3px;border:1px solid var(--bd);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--tx2);transition:all .1s;flex-shrink:0}
 .att-btn:hover{border-color:var(--ac);color:var(--ac)}
+.att-btn.rec{border-color:var(--red);background:var(--red);color:#fff}
+.att-btn.on{border-color:var(--ac);color:var(--ac);background:var(--acD)}
 .ht{font-family:var(--mono);font-size:8px;color:var(--mt);margin-top:3px;text-align:center;letter-spacing:.3px}
+
+/* Link row */
+.link-row{display:none;align-items:center;gap:6px;max-width:720px;margin:0 auto 6px;padding:6px 8px;border:1px solid var(--bd);border-radius:3px;background:var(--bg3)}
+.link-row.on{display:flex}
+.link-row input{flex:1;padding:6px 8px;background:var(--bg2);border:1px solid var(--bd);color:var(--tx);border-radius:3px;font-family:var(--mono);font-size:10px;outline:none}
+.link-row input:focus{border-color:var(--ac)}
+.link-row button{padding:6px 10px;border-radius:3px;border:1px solid var(--bd);background:transparent;color:var(--tx2);cursor:pointer;font-family:var(--mono);font-size:10px;transition:all .1s}
+.link-row button:hover{border-color:var(--ac);color:var(--ac)}
 
 /* Drop overlay */
 .drop-zone{display:none;position:fixed;inset:0;z-index:300;background:rgba(6,6,11,.85);border:2px dashed var(--ac);margin:16px;border-radius:8px;align-items:center;justify-content:center;flex-direction:column;gap:12px}
@@ -174,13 +198,22 @@ body>*{position:relative;z-index:1}
 .drop-zone .dz-txt{font-family:var(--mono);font-size:14px;color:var(--ac);letter-spacing:1px}
 
 /* File preview bar */
-.fp-bar{display:none;padding:6px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:3px;margin:0 auto 6px;max-width:720px;width:calc(100% - 28px);align-items:center;gap:8px}
+.fp-bar{display:none;padding:6px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:3px;margin:0 auto 6px;max-width:720px;width:calc(100% - 28px);align-items:center;gap:8px;flex-wrap:wrap}
 .fp-bar.on{display:flex}
 .fp-bar img{height:40px;border-radius:2px;border:1px solid var(--bd)}
 .fp-bar .fp-info{flex:1;overflow:hidden}
 .fp-bar .fp-name{font-family:var(--mono);font-size:10px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fp-bar .fp-size{font-family:var(--mono);font-size:8px;color:var(--mt)}
 .fp-bar .fp-rm{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px;font-family:var(--mono)}
+.fp-item{display:flex;align-items:center;gap:8px}
+.fp-file{flex:1;min-width:220px}
+.fp-link{padding:4px 6px;border-radius:3px;border:1px solid var(--bd);background:var(--bg2)}
+.fp-link a{color:var(--ac);font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;display:inline-block}
+.fp-link .fp-rm{margin-left:4px}
+.fp-media{width:40px;height:40px;border-radius:2px;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--mt)}
+
+/* Attachment previews */
+.att-preview audio,.att-preview video{max-width:100%;width:100%;display:block;border-radius:3px}
 
 /* ── Settings Modal (multi-provider) ── */
 .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
@@ -228,6 +261,15 @@ body>*{position:relative;z-index:1}
 
 <div class="mn">
   <div class="ab" id="ab"><label>AGENT</label></div>
+  <div class="mb">
+    <label>MODE</label>
+    <button class="mbtn" id="researchToggle" onclick="toggleResearch()">&#x2207; Research</button>
+    <button class="mbtn" id="agenticToggle" onclick="toggleAgentic()">&#x2295; Agentic</button>
+    <div class="acw" id="agentCountWrap">
+      <span>AGENTS</span>
+      <input type="number" id="agentCount" min="1" value="3">
+    </div>
+  </div>
   <div class="hd">
     <button class="tg" onclick="togSB()">&#9776;</button>
     <div class="ms">
@@ -257,23 +299,40 @@ body>*{position:relative;z-index:1}
 
   <!-- File preview bar -->
   <div class="fp-bar" id="fpBar">
-    <div id="fpThumb"></div>
-    <div class="fp-info">
-      <div class="fp-name" id="fpName"></div>
-      <div class="fp-size" id="fpSize"></div>
+    <div class="fp-item fp-file" id="fpFile">
+      <div id="fpThumb"></div>
+      <div class="fp-info">
+        <div class="fp-name" id="fpName"></div>
+        <div class="fp-size" id="fpSize"></div>
+      </div>
+      <button class="fp-rm" onclick="clearFile()">&#x2715;</button>
     </div>
-    <button class="fp-rm" onclick="clearFile()">&#x2715;</button>
+    <div class="fp-item fp-link" id="fpLink">
+      <span class="fp-media">&#x1F517;</span>
+      <a id="fpLinkUrl" href="#" target="_blank" rel="noopener">link</a>
+      <button class="fp-rm" onclick="clearLink()">&#x2715;</button>
+    </div>
+  </div>
+
+  <div class="link-row" id="linkRow">
+    <input type="url" id="linkInput" placeholder="Paste a link to include (press attach)">
+    <button onclick="attachLink()">ATTACH</button>
   </div>
 
   <div class="ip">
     <div class="ip-w">
       <button class="att-btn" onclick="document.getElementById('fileIn').click()" title="Upload file">&#x1F4CE;</button>
       <input type="file" id="fileIn" style="display:none" onchange="handleFile(this.files[0])" accept="*/*">
+      <button class="att-btn" id="audioBtn" onclick="toggleAudio()" title="Audio chat">&#x1F3A4;</button>
+      <input type="file" id="audioIn" style="display:none" onchange="handleFile(this.files[0])" accept="audio/*">
+      <button class="att-btn" onclick="document.getElementById('videoIn').click()" title="Upload video">&#x1F3A5;</button>
+      <input type="file" id="videoIn" style="display:none" onchange="handleFile(this.files[0])" accept="video/*">
+      <button class="att-btn" id="linkBtn" onclick="toggleLink()" title="Attach link">&#x1F517;</button>
       <textarea id="ui" placeholder="Type a message...  Ctrl+V to paste image" rows="1" onkeydown="kd(event)" onpaste="handlePaste(event)"></textarea>
       <button class="snd" id="sB" onclick="send()">&#x2192;</button>
       <button class="stp" id="stB" onclick="stop()">&#x25A0;</button>
     </div>
-    <div class="ht">ENTER send &middot; SHIFT+ENTER newline &middot; paste image or drag file</div>
+    <div class="ht">ENTER send &middot; SHIFT+ENTER newline &middot; paste image, record audio, upload video, or attach link</div>
   </div>
 </div>
 
@@ -295,11 +354,117 @@ body>*{position:relative;z-index:1}
 
 <script>
 let cur=null,gen=false,ctrl=null,agents={},models=[],activeAgent='chat',providerStatus={};
-let pendingFile=null;
+let pendingFile=null,pendingLink=null;
+let recorder=null,recordStream=null,recording=false,audioChunks=[];
 
 document.addEventListener('DOMContentLoaded',()=>{loadSt();loadConv();aR(document.getElementById('ui'));setupDragDrop()});
 document.getElementById('ui').addEventListener('input',function(){aR(this)});
 function aR(e){e.style.height='auto';e.style.height=Math.min(e.scrollHeight,120)+'px'}
+
+function syncModeToggles(){
+  const r=document.getElementById('researchToggle');
+  const a=document.getElementById('agenticToggle');
+  const w=document.getElementById('agentCountWrap');
+  if(r)r.classList.toggle('act',activeAgent==='researcher');
+  if(a)a.classList.toggle('act',activeAgent==='swarm');
+  if(w)w.classList.toggle('on',activeAgent==='swarm');
+}
+
+function updateAgentCountMax(){
+  const input=document.getElementById('agentCount');
+  if(!input)return;
+  const max=Math.max(1,Object.keys(agents).filter(k=>k!=='swarm').length);
+  input.max=max;
+  if(parseInt(input.value,10)>max)input.value=max;
+}
+
+function toggleResearch(){activeAgent==='researcher'?selAgent('chat'):selAgent('researcher')}
+function toggleAgentic(){activeAgent==='swarm'?selAgent('chat'):selAgent('swarm')}
+
+function toggleLink(){
+  const row=document.getElementById('linkRow');
+  row.classList.toggle('on');
+  document.getElementById('linkBtn').classList.toggle('on',row.classList.contains('on'));
+  if(row.classList.contains('on'))document.getElementById('linkInput').focus();
+  updatePreviewBar();
+}
+
+function attachLink(){
+  const input=document.getElementById('linkInput');
+  let url=input.value.trim();
+  if(!url)return;
+  try{
+    const parsed=new URL(url);
+    if(!/^https?:$/.test(parsed.protocol))throw new Error('Invalid protocol');
+    url=parsed.href;
+  }catch(e){
+    alert('Please enter a valid http(s) URL.');
+    return;
+  }
+  pendingLink=url;
+  input.value=url;
+  updatePreviewBar();
+  document.getElementById('linkRow').classList.remove('on');
+  document.getElementById('linkBtn').classList.remove('on');
+}
+
+function clearLink(){
+  pendingLink=null;
+  const input=document.getElementById('linkInput');
+  input.value='';
+  document.getElementById('linkRow').classList.remove('on');
+  updatePreviewBar();
+}
+
+function updatePreviewBar(){
+  const bar=document.getElementById('fpBar');
+  const fileEl=document.getElementById('fpFile');
+  const linkEl=document.getElementById('fpLink');
+  const linkUrl=document.getElementById('fpLinkUrl');
+  const linkBtn=document.getElementById('linkBtn');
+  const hasFile=!!pendingFile;
+  const hasLink=!!pendingLink;
+  if(hasFile)fileEl.style.display='flex';else fileEl.style.display='none';
+  if(hasLink){
+    linkEl.style.display='flex';
+    linkUrl.textContent=pendingLink;
+    linkUrl.href=pendingLink;
+  }else{
+    linkEl.style.display='none';
+  }
+  bar.classList.toggle('on',hasFile||hasLink);
+  if(linkBtn)linkBtn.classList.toggle('on',hasLink);
+}
+
+async function toggleAudio(){
+  if(recording){
+    if(recorder)recorder.stop();
+    return;
+  }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    document.getElementById('audioIn').click();
+    return;
+  }
+  try{
+    recordStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    recorder=new MediaRecorder(recordStream);
+    audioChunks=[];
+    recorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data)};
+    recorder.onstop=()=>{
+      const blob=new Blob(audioChunks,{type:recorder.mimeType||'audio/webm'});
+      const file=new File([blob],`recording_${Date.now()}.webm`,{type:blob.type});
+      handleFile(file);
+      recordStream.getTracks().forEach(t=>t.stop());
+      recordStream=null;recorder=null;recording=false;
+      document.getElementById('audioBtn').classList.remove('rec');
+    };
+    recorder.start();
+    recording=true;
+    document.getElementById('audioBtn').classList.add('rec');
+  }catch(e){
+    alert(`Unable to access microphone: ${e&&e.message?e.message:'Unknown error'}`);
+  }
+}
 
 // ── Drag & Drop ──
 function setupDragDrop(){
@@ -330,28 +495,44 @@ function handlePaste(e){
 async function handleFile(file){
   if(!file)return;
   if(file.size>20*1024*1024){alert('File too large (max 20MB)');return}
-  const bar=document.getElementById('fpBar');
   const name=document.getElementById('fpName');
   const sz=document.getElementById('fpSize');
   const thumb=document.getElementById('fpThumb');
   const reader=new FileReader();
   reader.onload=function(e){
     const b64=e.target.result.split(',')[1];
-    pendingFile={name:file.name,type:file.type,base64:b64,is_image:file.type.startsWith('image/')};
+    pendingFile={
+      name:file.name,
+      type:file.type,
+      base64:b64,
+      is_image:file.type.startsWith('image/'),
+      is_audio:file.type.startsWith('audio/'),
+      is_video:file.type.startsWith('video/')
+    };
     name.textContent=file.name;
     sz.textContent=formatSize(file.size);
     thumb.innerHTML='';
     if(pendingFile.is_image){
       thumb.innerHTML=`<img src="data:${file.type};base64,${b64}" alt="preview">`;
+    } else if(pendingFile.is_audio){
+      thumb.innerHTML=`<div class="fp-media">&#x1F3A4;</div>`;
+    } else if(pendingFile.is_video){
+      thumb.innerHTML=`<div class="fp-media">&#x1F3A5;</div>`;
     } else {
       thumb.innerHTML=`<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bd);border-radius:2px;font-size:18px;color:var(--mt)">&#x1F4C4;</div>`;
     }
-    bar.classList.add('on');
+    updatePreviewBar();
   };
   reader.readAsDataURL(file);
 }
 
-function clearFile(){pendingFile=null;document.getElementById('fpBar').classList.remove('on');document.getElementById('fileIn').value=''}
+function clearFile(){
+  pendingFile=null;
+  document.getElementById('fileIn').value='';
+  document.getElementById('audioIn').value='';
+  document.getElementById('videoIn').value='';
+  updatePreviewBar();
+}
 function formatSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB'}
 
 // ── Status & Init ──
@@ -398,6 +579,8 @@ async function loadSt(){
       sel.appendChild(og);
     }
     onModel();
+    updateAgentCountMax();
+    syncModeToggles();
   }catch(e){console.error(e)}
 }
 
@@ -408,6 +591,7 @@ function selAgent(id){
     if(b.dataset.id===id){b.classList.add('act');b.style.cssText=`border-color:${a.color};color:${a.color}`}
     else{b.classList.remove('act');b.style.cssText=''}
   });
+  syncModeToggles();
 }
 
 async function loadConv(){try{const r=await fetch('/api/conversations'),d=await r.json();renderConv(d.conversations)}catch(e){}}
@@ -428,7 +612,7 @@ async function loadMsgs(id){
     const r=await fetch(`/api/conversations/${id}`),d=await r.json();
     const mc=document.getElementById('mc');mc.innerHTML='';
     d.messages.forEach(m=>{
-      if(m.role==='user')addU(m.content,m.attachment_type,m.attachment_name,m.attachment_data);
+      if(m.role==='user')addU(m.content,m.attachment_type,m.attachment_name,m.attachment_data,m.link_url);
       else addA(m.content,m.agent||'chat',false);
     });
     scr();loadConv();
@@ -440,18 +624,26 @@ function qs(t){document.getElementById('ui').value=t;send()}
 
 async function send(){
   const inp=document.getElementById('ui'),msg=inp.value.trim();
-  if((!msg&&!pendingFile)||gen)return;
+  const link=pendingLink?pendingLink.trim():'';
+  if((!msg&&!pendingFile&&!link)||gen)return;
   gen=true;document.getElementById('sB').disabled=true;document.getElementById('stB').classList.add('vis');
   const w=document.getElementById('wl');if(w)w.style.display='none';
 
   const file=pendingFile;
-  addU(msg||`[Uploaded: ${file?file.name:'file'}]`,file?file.type:null,file?file.name:null,file?file.base64:null);
-  inp.value='';aR(inp);clearFile();scr();
+  const displayMessage=msg||`${file?`[Uploaded: ${file.name}]`:''}`;
+  addU(displayMessage,file?file.type:null,file?file.name:null,file?file.base64:null,link||null);
+  inp.value='';aR(inp);clearFile();clearLink();scr();
   const mid=document.getElementById('msel').value;
 
   try{
     ctrl=new AbortController();
-    const body={message:msg||`Please analyze this ${file?file.type:'file'}.`,conversation_id:cur,agent:activeAgent,model_id:mid};
+    const bodyMessage=msg||(file?`Please analyze this ${file?file.type:'file'}.`:(link?'Please review this link.':''));
+    const body={message:bodyMessage,conversation_id:cur,agent:activeAgent,model_id:mid};
+    if(activeAgent==='swarm'){
+      const count=parseInt(document.getElementById('agentCount').value,10);
+      if(count)body.agent_count=count;
+    }
+    if(link)body.link_url=link;
     if(file){body.attachment_type=file.type;body.attachment_name=file.name;body.attachment_data=file.base64}
 
     const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctrl.signal});
@@ -509,14 +701,22 @@ function stop(){if(ctrl)ctrl.abort();if(cur)fetch('/api/stop',{method:'POST',hea
 async function delC(id){if(!confirm('Delete?'))return;await fetch(`/api/conversations/${id}`,{method:'DELETE'});if(cur===id)newChat();loadConv()}
 async function clearChat(){if(!cur)return;if(!confirm('Clear?'))return;await fetch(`/api/conversations/${cur}/clear`,{method:'POST'});loadMsgs(cur)}
 
-function addU(c,attType,attName,attData){
+function addU(c,attType,attName,attData,linkUrl){
   const mc=document.getElementById('mc'),d=document.createElement('div');d.className='msg usr';
   let attHTML='';
+  if(linkUrl){
+    const safe=esc(linkUrl);
+    attHTML+=`<div class="att-file att-link"><span class="af-ic">&#x1F517;</span><a href="${safe}" target="_blank" rel="noopener">${safe}</a></div>`;
+  }
   if(attName){
     if(attType&&attType.startsWith('image/')&&attData){
-      attHTML=`<div class="att-preview"><img src="data:${attType};base64,${attData}" alt="${esc(attName)}"></div>`;
+      attHTML+=`<div class="att-preview"><img src="data:${attType};base64,${attData}" alt="${esc(attName)}"></div>`;
+    }else if(attType&&attType.startsWith('audio/')&&attData){
+      attHTML+=`<div class="att-preview"><audio controls src="data:${attType};base64,${attData}"></audio></div>`;
+    }else if(attType&&attType.startsWith('video/')&&attData){
+      attHTML+=`<div class="att-preview"><video controls src="data:${attType};base64,${attData}"></video></div>`;
     }else{
-      attHTML=`<div class="att-file"><span class="af-ic">&#x1F4C4;</span><span>${esc(attName)}</span></div>`;
+      attHTML+=`<div class="att-file"><span class="af-ic">&#x1F4C4;</span><span>${esc(attName)}</span></div>`;
     }
   }
   d.innerHTML=`<div class="av">&#x2200;</div><div><div class="bb">${attHTML}${c?md(c):''}</div></div>`;
@@ -559,7 +759,7 @@ async function openSet(){
             <span class="sg-tier" style="background:rgba(163,230,53,.1);color:#a3e635">FREE</span>
           </div>
           <label>OLLAMA BASE URL (no key needed)</label>
-          <input type="text" id="key_${p.id}" value="http://localhost:11434" placeholder="http://localhost:11434">
+          <input type="text" id="url_${p.id}" value="${p.base_url||'http://localhost:11434'}" placeholder="http://localhost:11434">
           <div class="hl"><a href="${p.signup}" target="_blank">Install Ollama</a> &middot; ${p.free_tier} &middot; <button onclick="detectOllama()" style="background:none;border:1px solid var(--bd);color:var(--ac);padding:1px 6px;border-radius:2px;font-family:var(--mono);font-size:8px;cursor:pointer">Detect Models</button> <span id="ollamaDetected"></span></div>
         </div>`;
       }else{
@@ -573,7 +773,9 @@ async function openSet(){
           </div>
           <label>${p.key_env}</label>
           <input type="password" id="key_${p.id}" placeholder="${p.has_key?'•••••••• (set)':'paste API key here...'}">
-          <div class="hl"><a href="${p.signup}" target="_blank">Get free key</a> &middot; ${p.free_tier}</div>
+          <label>BASE URL (optional)</label>
+          <input type="text" id="url_${p.id}" value="${p.base_url||p.default_url||''}" placeholder="${p.default_url||''}">
+          <div class="hl"><a href="${p.signup}" target="_blank">Get free key</a> &middot; ${p.free_tier} &middot; override endpoint for proxies or gateways</div>
         </div>`;
       }
     }
@@ -600,9 +802,13 @@ async function saveSet(){
       const val=inp.value.trim();
       if(!val)return;
       const pid=inp.id.replace('key_','');
-      // Ollama uses base_url, others use api_key
-      body[pid+'_base_url']=val; // Will be picked up by backend
       if(pid!=='ollama')body[pid+'_api_key']=val;
+    });
+    document.querySelectorAll('[id^="url_"]').forEach(inp=>{
+      const val=inp.value.trim();
+      if(!val)return;
+      const pid=inp.id.replace('url_','');
+      body[pid+'_base_url']=val;
     });
     const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.ok){closeSet();alert('Saved! Reloading...');location.reload()}else alert('Error')}
