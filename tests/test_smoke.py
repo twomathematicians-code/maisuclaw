@@ -1,4 +1,4 @@
 def test_python_multipart_available() -> None:
-    import multipart
+    import python_multipart
 
-    assert multipart.__version__
+    assert python_multipart.__version__
