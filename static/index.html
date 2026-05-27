@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>maisuclaw</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <h2>maisuclaw</h2>
+        <button id="new-chat-btn" title="New chat">+</button>
+      </div>
+      <div id="session-list"></div>
+      <div class="sidebar-footer">
+        <div id="model-badge"></div>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <main id="main">
+      <!-- Top bar -->
+      <header id="topbar">
+        <button id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
+        <span id="session-title">New Conversation</span>
+        <select id="mode-select">
+          <option value="">Auto</option>
+          <option value="code">Code</option>
+          <option value="fast">Fast</option>
+        </select>
+      </header>
+
+      <!-- Chat messages -->
+      <div id="chat-container">
+        <div id="messages"></div>
+      </div>
+
+      <!-- Input area -->
+      <div id="input-area">
+        <button id="voice-btn" title="Record voice">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <textarea id="user-input" placeholder="Ask maisuclaw anything..." rows="1"></textarea>
+        <button id="send-btn" title="Send">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

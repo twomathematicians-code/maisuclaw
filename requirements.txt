@@ -1,0 +1,18 @@
+# ── maisuclaw dependencies ─────────────────────────────────
+
+# Web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# HTTP client (for Ollama API)
+requests>=2.31.0
+
+# Browser automation (optional — for web search tool)
+playwright>=1.40.0
+
+# Math for embeddings
+numpy>=1.26.0
+
+# Pydantic (usually bundled with FastAPI, but explicit)
+pydantic>=2.5.0
