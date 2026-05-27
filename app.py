@@ -26,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import httpx
+from config import OPENROUTER_REFERER
 
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
@@ -34,7 +35,6 @@ import httpx
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER", "https://maisuclaw.onrender.com")
 GROQ_URL = "https://api.groq.com/openai/v1"
 OPENROUTER_URL = "https://openrouter.ai/api/v1"
 PORT = int(os.environ.get("PORT", "8000"))
